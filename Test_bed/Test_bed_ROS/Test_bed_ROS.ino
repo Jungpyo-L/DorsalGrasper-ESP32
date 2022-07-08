@@ -6,10 +6,10 @@
 #define MOTOR_A 25    // Motor output A (A0 in ESP32)
 #define MOTOR_B 26    // Motor output B (A1 in ESP32)
 #define BTN_G 34      // Button green input (A2 in ESP32)
-#define BTN_R 39      // Button red input (A3 in ESP32)
+#define BTN_B 39      // Button red input (A3 in ESP32)
 #define JOYSTICK_L 36 // Joystick left input (A4 in ESP32)
 #define JOYSTICK_R 4  // Joystick right input (A5 in ESP32)
-#define FOOTPEDAL 21  // Footpedal switch input (21 in ESP32, it needs pull-down resistor)
+#define BTN_R 21  // Footpedal switch input (21 in ESP32, it needs pull-down resistor)
 // Top row:
 #define LED_PIN 13  // ESP32's built-in led pin
 #define TEMP_PIN 12 // Should not use this pin to work appropriately
@@ -53,15 +53,15 @@ const int MAX_ANGLE = 60; // maximum angle of the wrist
 const int MIN_ANGLE = 20; // minimum angle of the wrist
 const int Kp = 10;      // P gain for tendon
 const float Ki = 0.9;     // I gain for tendon
-const int Kd = 2;       // D gain for tendon
+const int Kd = 0;       // D gain for tendon
 const int Kp2 = 500;      // P gain for wrist
 const float Ki2 = 45;     // I gain for wrist
-const int Kd2 = 100;       // D gain for wrist
+const int Kd2 = 0;       // D gain for wrist
 int duty = 0;
 float Err = 0;
 
 // Record variables -------------------------------------
-int state = INITIALIZATION;
+int state = MANUAL_MODE;
 unsigned long elapsed_time;             // elapsed time
 int encoder_count;                      // position of the motor
 uint8_t j_L, j_R;                       // joystick left, right, and pedal input
@@ -79,6 +79,9 @@ void setup() {
   Serial.begin(115200);
   pinMode(JOYSTICK_L, INPUT);
   pinMode(JOYSTICK_R, INPUT);
+  pinMode(BTN_G, INPUT);
+  pinMode(BTN_B, INPUT);
+  pinMode(BTN_R, INPUT);
   pinMode(MOTOR_EN, OUTPUT);
 
   // Palm loadcell initialization
@@ -111,160 +114,130 @@ void loop() {
 
 switch (state)
   {
-  case INITIALIZATION:
+   case MANUAL_MODE:
   {
-    motor_STOP();
-//    timerStop(timer0);
-//    timerStop(timer1);
-    byte incoming = Serial.read();
-
-    if (incoming == 'm')
+    delay(50);
+    if (digitalRead(BTN_B) == true)
     {
-      state = MANUAL_MODE;
+      delay(50);
+      if (digitalRead(BTN_B) == true)
+      {
+        state = AUTOMATIC_MODE;
+      }
     }
-    if (incoming == 'a')
+    if (digitalRead(BTN_G) == true)
     {
-      state = AUTOMATIC_MODE;
-//      timerRestart(timer0);
-//      timerRestart(timer1);
+      delay(50);
+      if (digitalRead(BTN_G) == true)
+      {
+        state = AUTOMATIC_MODE2;
+      }
     }
-    if (incoming == 'b')
+    if (digitalRead(BTN_R) == true)
     {
-      while (Serial.available() > 0)
-       Serial.read();
-      state = AUTOMATIC_MODE2;
-      Serial.println("Input contact point in mm ");
-      while(Serial.available() == 0){}
-      contactPoint = Serial.parseInt();
-    }
-    Serial.println('i');
-    delay(100);
-    break;
-  }
-  
-  case MANUAL_MODE:
-  {
-    byte incoming = Serial.read();
-    if (incoming == 'i')
-    {
-      state = INITIALIZATION;
-      motor_STOP();
-    }
-    if (incoming == 'a')
-    {
-      state = AUTOMATIC_MODE;
-      Serial.println('im here');
-    }
-    if (incoming == 'b')
-    {
-      while (Serial.available() > 0)
-        Serial.read();
-        
-      state = AUTOMATIC_MODE2;
-      Serial.println("Input contact point in mm ");
-      while(Serial.available() == 0){}
-      contactPoint = Serial.parseInt();
-    }
-    if (incoming == 'p')
-    {
-      state = MOTOR_DISABLED;
+      delay(50);
+      if (digitalRead(BTN_R) == true)
+      {
+        state = MOTOR_DISABLED;
+      }
     }
     get_DATA();
-    print_DATA();
+    print_DATA_ROS();
     manual_MODE();
     break;
   }
-
   case AUTOMATIC_MODE:
   {
-    digitalWrite(MOTOR_EN, HIGH);
-    byte incoming = Serial.read();
-
-    if (incoming == 'i')
+    if (digitalRead(BTN_G) == true)
     {
-      state = INITIALIZATION;
-      motor_STOP();
+      delay(50);
+      if (digitalRead(BTN_G) == true)
+      {
+        state = AUTOMATIC_MODE2;
+      }
     }
-    if (incoming == 'b')
+    if (digitalRead(BTN_G) == true && digitalRead(BTN_B) == true)
     {
-      while (Serial.available() > 0)
-       Serial.read();
-       
-      state = AUTOMATIC_MODE2;
-      Serial.println("Input contact point in mm ");
-      while(Serial.available() == 0){}
-      contactPoint = Serial.parseInt();
+      delay(50);
+      if (digitalRead(BTN_G) == true && digitalRead(BTN_B) == true)
+      {
+        state = MANUAL_MODE;
+      }
     }
-    if (incoming == 'm')
+    if (digitalRead(BTN_R) == true)
     {
-      state = MANUAL_MODE;
-    }
-    if (incoming == 'p')
-    {
-      state = MOTOR_DISABLED;
+      delay(50);
+      if (digitalRead(BTN_R) == true)
+      {
+        state = MOTOR_DISABLED;
+      }
     }
     get_DATA();
-    print_DATA();
+    print_DATA_ROS();
     automatic_MODE();
     break;
   }
 
   case AUTOMATIC_MODE2:
   {
-    digitalWrite(MOTOR_EN, HIGH);
-    byte incoming = Serial.read();
-
-    if (incoming == 'i')
+    if (digitalRead(BTN_B) == true)
     {
-      state = INITIALIZATION;
-      motor_STOP();
+      delay(50);
+      if (digitalRead(BTN_B) == true)
+      {
+        state = AUTOMATIC_MODE;
+      }
     }
-    if (incoming == 'a')
+    if (digitalRead(BTN_G) == true && digitalRead(BTN_B) == true)
     {
-      state = AUTOMATIC_MODE;
+      delay(50);
+      if (digitalRead(BTN_G) == true && digitalRead(BTN_B) == true)
+      {
+        state = MANUAL_MODE;
+      }
     }
-    if (incoming == 'm')
+    if (digitalRead(BTN_R) == true)
     {
-      state = MANUAL_MODE;
-    }
-    if (incoming == 'p')
-    {
-      state = MOTOR_DISABLED;
+      delay(50);
+      if (digitalRead(BTN_R) == true)
+      {
+        state = MOTOR_DISABLED;
+      }
     }
     get_DATA();
-    print_DATA();
+    print_DATA_ROS();
     automatic_MODE2();
     break;
   }
 
   case MOTOR_DISABLED:
   {
-    byte incoming = Serial.read();
-
-    if (incoming == 'i')
+    if (digitalRead(BTN_B) == true)
     {
-      state = INITIALIZATION;
-      motor_STOP();
+      delay(50);
+      if (digitalRead(BTN_B) == true)
+      {
+        state = AUTOMATIC_MODE;
+      }
     }
-    if (incoming == 'm')
+    if (digitalRead(BTN_G) == true)
     {
-      state = MANUAL_MODE;
+      delay(50);
+      if (digitalRead(BTN_G) == true)
+      {
+        state = AUTOMATIC_MODE2;
+      }
     }
-    if (incoming == 'a')
+    if (digitalRead(BTN_G) == true && digitalRead(BTN_B) == true)
     {
-      state = AUTOMATIC_MODE;
-    }
-    if (incoming == 'b')
-    {
-      while (Serial.available() > 0)
-       Serial.read();
-      state = AUTOMATIC_MODE2;
-      Serial.println("Input contact point in mm ");
-      while(Serial.available() == 0){}
-      contactPoint = Serial.parseInt();
+      delay(50);
+      if (digitalRead(BTN_G) == true && digitalRead(BTN_B) == true)
+      {
+        state = MANUAL_MODE;
+      }
     }
     get_DATA();
-    print_DATA();
+    print_DATA_ROS();
     motor_DISALBED();
     break;
   }
@@ -294,6 +267,13 @@ void get_DATA()
   // convert palm_raw to Nm units
   palm = 0.001 * 9.81 * palm_raw; // convert to Kg, multiply 9.81 m/s^2, multiply 0.065 m (contact point)
   tendon = 0.001 * 9.81 * tendon_raw;
+}
+
+void print_DATA_ROS()
+{
+  Serial.print(tendon, 4);
+  Serial.print(" , ");
+  Serial.println(palm, 4);
 }
 
 void print_DATA()
@@ -346,10 +326,11 @@ void print_DATA()
 
 void motor_DISALBED()
 {
-  digitalWrite(MOTOR_EN, HIGH);
-  ledcWrite(pwmChannel_1, LOW);
-  ledcWrite(pwmChannel_2, LOW);
-  digitalWrite(LED_PIN, LOW);
+//  digitalWrite(MOTOR_EN, LOW);
+//  ledcWrite(pwmChannel_1, LOW);
+//  ledcWrite(pwmChannel_2, LOW);
+//  digitalWrite(LED_PIN, LOW);
+  motor_STOP();
 }
 
 void motor_STOP()
@@ -395,7 +376,6 @@ void manual_MODE()
 void automatic_MODE()
 {
   duty = PID(tendon, tendon_desire);
-  Serial.println("im here");
 
   if (duty > 0)
   {

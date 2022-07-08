@@ -1,9 +1,10 @@
 /*
  * author Jungpyo Lee: <jungpyolee@berkeley.edu> (c.)
  * creation date : Jan. 20. 2022
- * last update : Feb. 28. 2022
+ * last update : Jul. 07. 2022
  * version 1.1
- * changed: adding timer intterupt for data acquisition and motor operation
+ * changed: adding wrist mode 2, where wrist angle is used as similar with joystick
+ *          FSM inside wrist angle control mode
  * project : Dorsal Grasper v1.1
  * motivation : to change MCU from nucleo-32 to ESP32
  */
@@ -43,6 +44,12 @@
 #define JOYSTICK_MODE 2  // Joystick control mode
 #define WRIST_MODE 3     // Wrist angle control mode
 
+// Define states for the wrist angle mode ---------------
+#define IDLE 4          // Idle state (PWM = 0)
+#define CLOSING 5       // Finger closing state (PWM = positive)
+#define OPENING 6       // Finger opeing state (PWM = negative)
+#define GRASPING 7      // Grrasping mode, which finger follows wrist
+
 // Create instance --------------------------------------
 Adafruit_MPU6050 mpu;                     // Create instance of the MPU6060 class
 ADS ads;                                  // Create instance of the Angular Displacement Sensor (ADS) class
@@ -51,7 +58,7 @@ ESP32Encoder encoder;                     // Create instance of the ESP32 encode
 Adafruit_VL53L0X vl = Adafruit_VL53L0X();// Create instance of the distance sensor class (vl53l0)
 
 // Setup interrupt variables ----------------------------
-volatile int count = 0;             // encoder count
+volatile int count = 0;             // encoder count for speed
 volatile bool timer0_check = false; // check timer interrupt 0
 volatile bool timer1_check = false; // check timer interrupt 1
 hw_timer_t *timer0 = NULL;
@@ -72,6 +79,8 @@ void IRAM_ATTR onTime0()
 void IRAM_ATTR onTime1()
 { // this can be used for the motor operation
   portENTER_CRITICAL_ISR(&timerMux1);
+  count = encoder.getCount();
+  encoder.clearCount();
   timer1_check = true; // the function to be called when timer interrupt is triggered
   portEXIT_CRITICAL_ISR(&timerMux1);
 }
@@ -93,23 +102,31 @@ const int pwmChannel_2 = 2;
 const int resolution = 8; // PWM value from 0 to 255)
 const int MAX_PWM_VOLTAGE = 200; // too fast
 const int NOM_PWM_VOLTAGE = 150;
-const int JOYSTICK_PWM = 200;
-const int MAX_EN = 850; // encoder value in fully closed finger
-const int MAX_ANGLE = 60; // maximum angle of the wrist
-const int MIN_ANGLE = 20; // minimum angle of the wrist
+const int JOYSTICK_PWM = 200; // motor PWM value for the joystick mode
+const int WRIST_PWM = 200; // motor PWM value for the wrist angle mode
+const int MAX_EN = 1200; // encoder value in fully closed finger
+const int MAX_ANGLE = 45; // maximum angle of the wrist
+const int MIN_ANGLE = 10; // minimum angle of the wrist
+const int ON_ANGLE = 35; // on angle to close the finger
+const int OFF_ANGLE = 15; // off angle to open the inger
 const int Kp = 2;      // P gain
 const int Ki = 0.1;     // I gain
 const int Kd = 0;       // D gain
 bool calibrate_state;
 
 // Record variables -------------------------------------
-int state = INITIALIZATION;
+int state = INITIALIZATION;                     // state for the main loop
+int state2 = IDLE;                              // state for the wristn angle mode
 sensors_event_t a, g, temp;                     // mpu6050
 uint16_t distance, vl_status;                    // vl6080x & vl53l0x
 VL53L0X_RangingMeasurementData_t measure;       // vl53l0x
 unsigned long elapsed_time, t1, t2, t3, t4, t5; // elapsed time
 float temperature;                              // temperature from ad8405
 int encoder_count;                              // position of the motor
+int grasp_count;                                // position of the motor when the grasping mode starts
+int motor_speed = 0;                            // speed of the motor (unit is count)
+int motor_speed_prev;                           // to calculate motor acceleration
+int motor_acc;                                  // acceleration of the motor (unit is count)
 uint8_t j_L, j_R, pedal;                        // joystick left, right, and pedal input
 float angle;                                    // wrist angle from ads
 
@@ -267,7 +284,7 @@ void loop()
       portENTER_CRITICAL(&timerMux1);
       timer1_check = false;
       portEXIT_CRITICAL(&timerMux1);
-      wrist_MODE();
+      wrist_MODE2();
     }
     if (button_BOTH())
     {
@@ -278,7 +295,7 @@ void loop()
       digitalWrite(LED_R, HIGH);
       state = INITIALIZATION;
     }
-    wrist_MODE();
+    wrist_MODE2();
     break;
   }
   }
@@ -517,7 +534,10 @@ void get_DATA()
 
   // Encoder count
   // t2 = millis();
-  encoder_count = encoder.getCount();
+  encoder_count += count;
+  motor_speed = count;
+  motor_acc = motor_speed - motor_speed_prev;
+  motor_speed_prev = motor_speed;
   // Serial.print("Encoder: ");
   // Serial.println(millis()-t2);
 
@@ -566,6 +586,10 @@ void print_DATA()
   Serial.print(distance);
   Serial.print(", ");
   Serial.print(encoder_count);
+  Serial.print(", ");
+  Serial.print(motor_speed);
+  Serial.print(", ");
+  Serial.print(motor_acc);
   Serial.print(", ");
   Serial.print(j_L);
   Serial.print(", ");
@@ -689,10 +713,6 @@ void wrist_MODE()
     target_count = map(angle, MIN_ANGLE, MAX_ANGLE, 0, MAX_EN);
   }
   int duty = wrist_PID(encoder_count, target_count);
-//  Serial.print("error: ");
-//  Serial.println(target_count - encoder_count);
-//  Serial.print("duty: ");
-//  Serial.println(duty);
 
   if (duty > 0)
   {
@@ -734,4 +754,99 @@ int wrist_PID(int current, int target)
     SumErr = SumErr - Err; // anti-windup
   }
   return (int)pwm;
+}
+
+// Wrist angle control 2 (Jul.07.2022)
+void wrist_MODE2()
+{
+  switch (state2)
+  {
+  case IDLE:
+  {
+    Serial.println("IDLE status");
+    if (angle >= ON_ANGLE && distance < 50)
+    {
+      motor_FORWARD();
+      state2 = CLOSING;
+    }
+    else if (angle < OFF_ANGLE && encoder_count > 0)
+    {
+      motor_BACKWARD();
+      state2 = OPENING;
+    }
+    break;
+  }
+  case CLOSING:
+  {
+    Serial.println("CLOSING status");
+    if (motor_speed < 10 && motor_acc < -1)
+    {
+      motor_STOP();
+      grasp_count = encoder_count;
+      state2 = GRASPING;
+    }
+    else if (angle < ON_ANGLE)
+    {
+      motor_STOP();
+      state2 = IDLE;
+    }
+    break;
+  }
+  case OPENING:
+  {
+    Serial.println("OPENING status");
+    if (encoder_count <= 0)
+    {
+      motor_STOP();
+      state2 = IDLE;
+    }
+    else if (angle >= ON_ANGLE & distance < 50)
+    {
+      motor_FORWARD();
+      state2 = CLOSING;
+    }
+    break;
+  }
+  case GRASPING:
+  {
+    Serial.println("GRASPING status");
+    if (angle < OFF_ANGLE)
+    {
+      motor_BACKWARD();
+      state2 = OPENING;
+    }
+//    else if (angle >= ON_ANGLE + 10 && distance < 50)
+//    {
+//      motor_FORWARD();
+//      state2 = CLOSING;
+//    }
+    else
+    {
+      int target_count = map(angle, OFF_ANGLE, ON_ANGLE + 10, grasp_count + 100, grasp_count);
+      int duty = wrist_PID(encoder_count, target_count);
+
+      if (duty > 0)
+      {
+        ledcWrite(pwmChannel_1, duty);
+        ledcWrite(pwmChannel_2, LOW);
+        digitalWrite(LED_PIN, HIGH);
+      }
+      else if (duty < 0)
+      {
+        ledcWrite(pwmChannel_1, LOW);
+        ledcWrite(pwmChannel_2, -duty);
+        digitalWrite(LED_PIN, HIGH);
+      }
+      else if (duty == 0)
+      {
+        ledcWrite(pwmChannel_1, LOW);
+        ledcWrite(pwmChannel_2, LOW);
+      }
+    }
+    break;
+  }
+
+  default:
+    break;
+  }
 }
