@@ -763,7 +763,7 @@ void wrist_MODE2()
   {
   case IDLE:
   {
-    Serial.println("IDLE status");
+    // Serial.println("IDLE status");
     if (angle >= ON_ANGLE && distance < 50)
     {
       motor_FORWARD();
@@ -778,7 +778,7 @@ void wrist_MODE2()
   }
   case CLOSING:
   {
-    Serial.println("CLOSING status");
+    // Serial.println("CLOSING status");
     if (motor_speed < 10 && motor_acc < -1)
     {
       motor_STOP();
@@ -794,7 +794,7 @@ void wrist_MODE2()
   }
   case OPENING:
   {
-    Serial.println("OPENING status");
+    // Serial.println("OPENING status");
     if (encoder_count <= 0)
     {
       motor_STOP();
@@ -809,7 +809,7 @@ void wrist_MODE2()
   }
   case GRASPING:
   {
-    Serial.println("GRASPING status");
+    // Serial.println("GRASPING status");
     if (angle < OFF_ANGLE)
     {
       motor_BACKWARD();
