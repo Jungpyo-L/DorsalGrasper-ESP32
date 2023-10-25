@@ -79,7 +79,7 @@ void IRAM_ATTR onTime0()
 void IRAM_ATTR onTime1()
 { // this can be used for the motor operation
   portENTER_CRITICAL_ISR(&timerMux1);
-  count = -encoder.getCount();
+  count = encoder.getCount();
   encoder.clearCount();
   timer1_check = true; // the function to be called when timer interrupt is triggered
   portEXIT_CRITICAL_ISR(&timerMux1);
@@ -157,7 +157,7 @@ void setup()
   // initialize sensor
 //  vl6180x_init();
   vl53l0x_init();
-  mpu6050_init();
+//  mpu6050_init();
   encoder_init();
   ads_init();
 
@@ -362,8 +362,7 @@ bool vl53l0x_init()
   }
   // power 
   Serial.println(F("VL53L0X API Simple Ranging example\n\n")); 
-//  vl.startRangeContinuous(50);
-  vl.startRange();
+  vl.startRangeContinuous(50);
   delay(100);
 }
  
@@ -561,8 +560,7 @@ void get_DATA()
   // t1 = millis();
   // Distance
 //  distance = vl.readRangeResult(); // We need to use readRangeResult with continuous reading mode (readRange function has while loop inside it)
-  vl.startRange();
-  distance = vl.readRange();
+    distance = 0;
 //  vl.rangingTest(&measure, false);
 //  if (measure.RangeStatus !=4)
 //  {
@@ -592,13 +590,13 @@ void get_DATA()
 
   // Accecleration and Gyro
   // t4 = millis();
-  mpu.getEvent(&a, &g, &temp);
+//  mpu.getEvent(&a, &g, &temp);
   // Serial.print("Acceleration and Gyro: ");
   // Serial.println(millis()-t4);
 
   // Temperature
   // t5 = millis();
-  temperature = get_temperature();
+//  temperature = get_temperature();
   // Serial.print("temperature: ");
   // Serial.println(millis()-t5);
 }
@@ -652,17 +650,17 @@ void print_DATA()
   Serial.print(", ");
   Serial.print(pedal);
   Serial.print(", ");
-  Serial.print(a.acceleration.x);
+  Serial.print(0);
   Serial.print(", ");
-  Serial.print(a.acceleration.y);
+  Serial.print(0);
   Serial.print(", ");
-  Serial.print(a.acceleration.z);
+  Serial.print(0);
   Serial.print(", ");
-  Serial.print(g.gyro.x);
+  Serial.print(0);
   Serial.print(", ");
-  Serial.print(g.gyro.y);
+  Serial.print(0);
   Serial.print(", ");
-  Serial.print(g.gyro.z);
+  Serial.print(0);
   Serial.print(", ");
   Serial.println(temperature);
   
@@ -820,7 +818,7 @@ void wrist_MODE2()
   case IDLE:
   {
     motor_STOP();
-    if (angle >= ON_ANGLE & distance < DIST_THRESHOLD)
+    if (angle >= ON_ANGLE)
     {
       motor_FORWARD();
       state2 = CLOSING;
@@ -859,7 +857,7 @@ void wrist_MODE2()
       motor_STOP();
       state2 = IDLE;
     }
-    else if (angle >= ON_ANGLE & distance < DIST_THRESHOLD)
+    else if (angle >= ON_ANGLE)
     {
       motor_FORWARD();
       state2 = CLOSING;

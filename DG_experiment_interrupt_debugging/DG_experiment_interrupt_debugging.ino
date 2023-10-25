@@ -13,10 +13,29 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_MPU6050.h>
-#include <Adafruit_VL6180X.h>
-#include <Adafruit_VL53L0X.h>
+//#include <Adafruit_VL6180X.h>
+//#include <Adafruit_VL53L0X.h>
+#include <VL53L0X.h>
 #include <SparkFun_Displacement_Sensor_Arduino_Library.h>
 #include <ESP32Encoder.h>
+
+// Define distance sensor's mode ------------------------
+// Uncomment this line to use long range mode. This
+// increases the sensitivity of the sensor and extends its
+// potential range, but increases the likelihood of getting
+// an inaccurate reading because of reflections from objects
+// other than the intended target. It works best in dark
+// conditions.
+
+//#define LONG_RANGE
+
+
+// Uncomment ONE of these two lines to get
+// - higher speed at the cost of lower accuracy OR
+// - higher accuracy at the cost of lower speed
+
+//#define HIGH_SPEED
+//#define HIGH_ACCURACY
 
 // Define pins ------------------------------------------
 // Botton row:
@@ -55,7 +74,8 @@ Adafruit_MPU6050 mpu;                     // Create instance of the MPU6060 clas
 ADS ads;                                  // Create instance of the Angular Displacement Sensor (ADS) class
 ESP32Encoder encoder;                     // Create instance of the ESP32 encoder class
 //Adafruit_VL6180X vl = Adafruit_VL6180X(); // Create instance of the distance sensor class
-Adafruit_VL53L0X vl = Adafruit_VL53L0X();// Create instance of the distance sensor class (vl53l0)
+//Adafruit_VL53L0X vl = Adafruit_VL53L0X();// Create instance of the distance sensor class (vl53l0)
+VL53L0X vl;
 
 // Setup interrupt variables ----------------------------
 volatile int count = 0;             // encoder count for speed
@@ -79,7 +99,7 @@ void IRAM_ATTR onTime0()
 void IRAM_ATTR onTime1()
 { // this can be used for the motor operation
   portENTER_CRITICAL_ISR(&timerMux1);
-  count = -encoder.getCount();
+  count = encoder.getCount();
   encoder.clearCount();
   timer1_check = true; // the function to be called when timer interrupt is triggered
   portEXIT_CRITICAL_ISR(&timerMux1);
@@ -97,8 +117,8 @@ void IRAM_ATTR isr1()
 
 // Setup variables --------------------------------------
 const int freq = 20000;
-const int pwmChannel_1 = 1;
-const int pwmChannel_2 = 2;
+const int pwmChannel_1 = 6;
+const int pwmChannel_2 = 7;
 const int resolution = 8; // PWM value from 0 to 255)
 const int MAX_PWM_VOLTAGE = 200; // too fast
 const int NOM_PWM_VOLTAGE = 150;
@@ -122,7 +142,7 @@ int state = INITIALIZATION;                     // state for the main loop
 int state2 = IDLE;                              // state for the wristn angle mode
 sensors_event_t a, g, temp;                     // mpu6050
 uint16_t distance, vl_status;                    // vl6080x & vl53l0x
-VL53L0X_RangingMeasurementData_t measure;       // vl53l0x
+//VL53L0X_RangingMeasurementData_t measure;       // vl53l0x
 unsigned long elapsed_time, t1, t2, t3, t4, t5; // elapsed time
 float temperature;                              // temperature from ad8405
 int encoder_count;                              // position of the motor
@@ -232,6 +252,10 @@ void loop()
     {
       encoder_count = 0;
     }
+    if (incoming == 'd')
+    {
+      vl53l0x_init();
+    }
     Serial.println('i');
     delay(100);
     break;
@@ -338,33 +362,62 @@ void loop()
 }
 
 // Setup functions --------------------------------------
-bool vl6180x_init()
-{
-  Serial.println("Adafruit VL6180x test!");
-  if (!vl.begin())
-  {
-    Serial.println("Failed to find VL6189x sensor");
-    while (1)
-      ;
-  }
-  Serial.println("Sensor found!");
-  Serial.println("");
-  vl.startRangeContinuous(50);
-  delay(100);
-}
+//bool vl6180x_init()
+//{
+//  Serial.println("Adafruit VL6180x test!");
+//  if (!vl.begin())
+//  {
+//    Serial.println("Failed to find VL6189x sensor");
+//    while (1)
+//      ;
+//  }
+//  Serial.println("Sensor found!");
+//  Serial.println("");
+//  vl.startRangeContinuous(50);
+//  delay(100);
+//}
 
 bool vl53l0x_init()
 {
-  Serial.println("Adafruit VL53L0X test");
-  if (!vl.begin()) {
-    Serial.println(F("Failed to boot VL53L0X"));
-    while(1);
+//  Serial.println("Adafruit VL53L0X initialization");
+//  if (!vl.begin()) {
+//    Serial.println(F("Failed to boot VL53L0X"));
+//    while(1);
+//  }
+//  // power 
+////  Serial.println(F("VL53L0X API Simple Ranging example\n\n")); 
+//  vl.startRangeContinuous(40);
+//  delay(100);
+
+  vl.setTimeout(500);
+  if (!vl.init())
+  {
+    Serial.println("Failed to detect and initialize sensor!");
+    while (1) {}
   }
-  // power 
-  Serial.println(F("VL53L0X API Simple Ranging example\n\n")); 
-//  vl.startRangeContinuous(50);
-  vl.startRange();
-  delay(100);
+
+  // Start continuous back-to-back mode (take readings as
+  // fast as possible).  To use continuous timed mode
+  // instead, provide a desired inter-measurement period in
+  // ms (e.g. sensor.startContinuous(100)).
+//  vl.startContinuous();
+
+  #if defined LONG_RANGE
+  // lower the return signal rate limit (default is 0.25 MCPS)
+  sensor.setSignalRateLimit(0.1);
+  // increase laser pulse periods (defaults are 14 and 10 PCLKs)
+  sensor.setVcselPulsePeriod(VL53L0X::VcselPeriodPreRange, 18);
+  sensor.setVcselPulsePeriod(VL53L0X::VcselPeriodFinalRange, 14);
+#endif
+
+#if defined HIGH_SPEED
+  // reduce timing budget to 20 ms (default is about 33 ms)
+  sensor.setMeasurementTimingBudget(20000);
+#elif defined HIGH_ACCURACY
+  // increase timing budget to 200 ms
+  sensor.setMeasurementTimingBudget(200000);
+#endif
+
 }
  
 bool mpu6050_init()
@@ -555,30 +608,30 @@ void get_DATA()
   {
     angle = ads.getX();
   }
-  //  Serial.print("Acceleration and Gyro: ");
-  //  Serial.println(millis()-elapsed_time);
+    Serial.print("Bending sensor: ");
+    Serial.println(millis()-elapsed_time);
 
-  // t1 = millis();
+   t1 = millis();
   // Distance
 //  distance = vl.readRangeResult(); // We need to use readRangeResult with continuous reading mode (readRange function has while loop inside it)
-  vl.startRange();
-  distance = vl.readRange();
 //  vl.rangingTest(&measure, false);
 //  if (measure.RangeStatus !=4)
 //  {
 //    distance = measure.RangeMilliMeter;
 //  }
-  // Serial.print("Distnace: ");
-  // Serial.println(millis()-t1);
+//  distance = vl.readRangeContinuousMillimeters();
+  distance = vl.readRangeSingleMillimeters();
+   Serial.print("Distnace: ");
+   Serial.println(millis()-t1);
 
   // Encoder count
-  // t2 = millis();
+   t2 = millis();
   encoder_count += count;
   motor_speed = count;
   motor_acc = motor_speed - motor_speed_prev;
   motor_speed_prev = motor_speed;
-  // Serial.print("Encoder: ");
-  // Serial.println(millis()-t2);
+   Serial.print("Encoder: ");
+   Serial.println(millis()-t2);
 
   // Joystick
   t3 = millis();
@@ -587,20 +640,20 @@ void get_DATA()
 
   // Pedal
   pedal = digitalRead(FOOTPEDAL);
-  // Serial.print("Joystick & pedal: ");
-  // Serial.println(millis()-t3);
+   Serial.print("Joystick & pedal: ");
+   Serial.println(millis()-t3);
 
   // Accecleration and Gyro
-  // t4 = millis();
+   t4 = millis();
   mpu.getEvent(&a, &g, &temp);
-  // Serial.print("Acceleration and Gyro: ");
-  // Serial.println(millis()-t4);
+   Serial.print("Acceleration and Gyro: ");
+   Serial.println(millis()-t4);
 
   // Temperature
-  // t5 = millis();
+   t5 = millis();
   temperature = get_temperature();
-  // Serial.print("temperature: ");
-  // Serial.println(millis()-t5);
+   Serial.print("temperature: ");
+   Serial.println(millis()-t5);
 }
 
 void print_DATA()

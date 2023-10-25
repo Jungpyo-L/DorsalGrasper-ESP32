@@ -11,12 +11,12 @@
 
 // Include headers --------------------------------------
 #include <Wire.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_MPU6050.h>
-#include <Adafruit_VL6180X.h>
-#include <Adafruit_VL53L0X.h>
-#include <SparkFun_Displacement_Sensor_Arduino_Library.h>
-#include <ESP32Encoder.h>
+//#include <Adafruit_Sensor.h>
+//#include <Adafruit_MPU6050.h>
+//#include <Adafruit_VL6180X.h>
+//#include <Adafruit_VL53L0X.h>
+//#include <SparkFun_Displacement_Sensor_Arduino_Library.h>
+//#include <ESP32Encoder.h>
 
 // Define pins ------------------------------------------
 // Botton row:
@@ -50,12 +50,12 @@
 #define OPENING 6       // Finger opeing state (PWM = negative)
 #define GRASPING 7      // Grrasping mode, which finger follows wrist
 
-// Create instance --------------------------------------
-Adafruit_MPU6050 mpu;                     // Create instance of the MPU6060 class
-ADS ads;                                  // Create instance of the Angular Displacement Sensor (ADS) class
-ESP32Encoder encoder;                     // Create instance of the ESP32 encoder class
-//Adafruit_VL6180X vl = Adafruit_VL6180X(); // Create instance of the distance sensor class
-Adafruit_VL53L0X vl = Adafruit_VL53L0X();// Create instance of the distance sensor class (vl53l0)
+// // Create instance --------------------------------------
+// Adafruit_MPU6050 mpu;                     // Create instance of the MPU6060 class
+// ADS ads;                                  // Create instance of the Angular Displacement Sensor (ADS) class
+//ESP32Encoder encoder;                     // Create instance of the ESP32 encoder class
+// //Adafruit_VL6180X vl = Adafruit_VL6180X(); // Create instance of the distance sensor class
+// Adafruit_VL53L0X vl = Adafruit_VL53L0X();// Create instance of the distance sensor class (vl53l0)
 
 // Setup interrupt variables ----------------------------
 volatile int count = 0;             // encoder count for speed
@@ -79,8 +79,8 @@ void IRAM_ATTR onTime0()
 void IRAM_ATTR onTime1()
 { // this can be used for the motor operation
   portENTER_CRITICAL_ISR(&timerMux1);
-  count = -encoder.getCount();
-  encoder.clearCount();
+//  count = -encoder.getCount();
+//  encoder.clearCount();
   timer1_check = true; // the function to be called when timer interrupt is triggered
   portEXIT_CRITICAL_ISR(&timerMux1);
 }
@@ -120,9 +120,9 @@ bool calibrate_state;
 // Record variables -------------------------------------
 int state = INITIALIZATION;                     // state for the main loop
 int state2 = IDLE;                              // state for the wristn angle mode
-sensors_event_t a, g, temp;                     // mpu6050
+//sensors_event_t a, g, temp;                     // mpu6050
 uint16_t distance, vl_status;                    // vl6080x & vl53l0x
-VL53L0X_RangingMeasurementData_t measure;       // vl53l0x
+//VL53L0X_RangingMeasurementData_t measure;       // vl53l0x
 unsigned long elapsed_time, t1, t2, t3, t4, t5; // elapsed time
 float temperature;                              // temperature from ad8405
 int encoder_count;                              // position of the motor
@@ -155,11 +155,11 @@ void setup()
   }
 
   // initialize sensor
-//  vl6180x_init();
-  vl53l0x_init();
-  mpu6050_init();
-  encoder_init();
-  ads_init();
+// //  vl6180x_init();
+//   vl53l0x_init();
+//   mpu6050_init();
+//  encoder_init();
+//   ads_init();
 
   // initialize motor
   Serial.println("Motor PWM Initiation");
@@ -239,7 +239,7 @@ void loop()
 
   case CALIBRATION:
   {
-    calibrate();
+//    calibrate();
     if (calibrate_state = HIGH)
     {
       state = INITIALIZATION;
@@ -256,7 +256,7 @@ void loop()
       timer0_check = false;
       portEXIT_CRITICAL(&timerMux0);
       get_DATA();
-      print_DATA();
+      // print_DATA();
     }
     if (timer1_check)
     {
@@ -290,188 +290,144 @@ void loop()
     joystick_MODE();
     break;
   }
-
-  case WRIST_MODE:
-  {
-    byte incoming = Serial.read();
-    if (timer0_check)
-    {
-      portENTER_CRITICAL(&timerMux0);
-      timer0_check = false;
-      portEXIT_CRITICAL(&timerMux0);
-      get_DATA();
-      print_DATA();
-    }
-    if (timer1_check)
-    {
-      portENTER_CRITICAL(&timerMux1);
-      timer1_check = false;
-      portEXIT_CRITICAL(&timerMux1);
-      wrist_MODE2();
-    }
-    if (button_BOTH())
-    {
-      motor_STOP();
-      timerStop(timer0);
-      timerStop(timer1);
-      digitalWrite(LED_G, HIGH);
-      digitalWrite(LED_R, HIGH);
-      state = INITIALIZATION;
-    }
-    if (incoming == 'i')
-    {
-      motor_STOP();
-      timerStop(timer0);
-      timerStop(timer1);
-      digitalWrite(LED_G, HIGH);
-      digitalWrite(LED_R, HIGH);
-      state = INITIALIZATION;
-    }
-    if (incoming == 'r')
-    {
-      encoder_count = 0;
-    }
-    wrist_MODE2();
-    break;
-  }
   }
 }
 
-// Setup functions --------------------------------------
-bool vl6180x_init()
-{
-  Serial.println("Adafruit VL6180x test!");
-  if (!vl.begin())
-  {
-    Serial.println("Failed to find VL6189x sensor");
-    while (1)
-      ;
-  }
-  Serial.println("Sensor found!");
-  Serial.println("");
-  vl.startRangeContinuous(50);
-  delay(100);
-}
+// // Setup functions --------------------------------------
+// bool vl6180x_init()
+// {
+//   Serial.println("Adafruit VL6180x test!");
+//   if (!vl.begin())
+//   {
+//     Serial.println("Failed to find VL6189x sensor");
+//     while (1)
+//       ;
+//   }
+//   Serial.println("Sensor found!");
+//   Serial.println("");
+//   vl.startRangeContinuous(50);
+//   delay(100);
+// }
 
-bool vl53l0x_init()
-{
-  Serial.println("Adafruit VL53L0X test");
-  if (!vl.begin()) {
-    Serial.println(F("Failed to boot VL53L0X"));
-    while(1);
-  }
-  // power 
-  Serial.println(F("VL53L0X API Simple Ranging example\n\n")); 
-//  vl.startRangeContinuous(50);
-  vl.startRange();
-  delay(100);
-}
+// bool vl53l0x_init()
+// {
+//   Serial.println("Adafruit VL53L0X test");
+//   if (!vl.begin()) {
+//     Serial.println(F("Failed to boot VL53L0X"));
+//     while(1);
+//   }
+//   // power 
+//   Serial.println(F("VL53L0X API Simple Ranging example\n\n")); 
+// //  vl.startRangeContinuous(50);
+//   vl.startRange();
+//   delay(100);
+// }
  
-bool mpu6050_init()
-{
-  Serial.println("Adafruit MPU6050 test!");
+// bool mpu6050_init()
+// {
+//   Serial.println("Adafruit MPU6050 test!");
 
-  // Try to initialize!
-  if (!mpu.begin())
-  {
-    Serial.println("Failed to find MPU6050 chip");
-    while (1)
-    {
-      delay(10);
-    }
-  }
-  Serial.println("MPU6050 Found!");
+//   // Try to initialize!
+//   if (!mpu.begin())
+//   {
+//     Serial.println("Failed to find MPU6050 chip");
+//     while (1)
+//     {
+//       delay(10);
+//     }
+//   }
+//   Serial.println("MPU6050 Found!");
 
-  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
-  Serial.print("Accelerometer range set to: ");
-  switch (mpu.getAccelerometerRange())
-  {
-  case MPU6050_RANGE_2_G:
-    Serial.println("+-2G");
-    break;
-  case MPU6050_RANGE_4_G:
-    Serial.println("+-4G");
-    break;
-  case MPU6050_RANGE_8_G:
-    Serial.println("+-8G");
-    break;
-  case MPU6050_RANGE_16_G:
-    Serial.println("+-16G");
-    break;
-  }
-  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
-  Serial.print("Gyro range set to: ");
-  switch (mpu.getGyroRange())
-  {
-  case MPU6050_RANGE_250_DEG:
-    Serial.println("+- 250 deg/s");
-    break;
-  case MPU6050_RANGE_500_DEG:
-    Serial.println("+- 500 deg/s");
-    break;
-  case MPU6050_RANGE_1000_DEG:
-    Serial.println("+- 1000 deg/s");
-    break;
-  case MPU6050_RANGE_2000_DEG:
-    Serial.println("+- 2000 deg/s");
-    break;
-  }
+//   mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+//   Serial.print("Accelerometer range set to: ");
+//   switch (mpu.getAccelerometerRange())
+//   {
+//   case MPU6050_RANGE_2_G:
+//     Serial.println("+-2G");
+//     break;
+//   case MPU6050_RANGE_4_G:
+//     Serial.println("+-4G");
+//     break;
+//   case MPU6050_RANGE_8_G:
+//     Serial.println("+-8G");
+//     break;
+//   case MPU6050_RANGE_16_G:
+//     Serial.println("+-16G");
+//     break;
+//   }
+//   mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+//   Serial.print("Gyro range set to: ");
+//   switch (mpu.getGyroRange())
+//   {
+//   case MPU6050_RANGE_250_DEG:
+//     Serial.println("+- 250 deg/s");
+//     break;
+//   case MPU6050_RANGE_500_DEG:
+//     Serial.println("+- 500 deg/s");
+//     break;
+//   case MPU6050_RANGE_1000_DEG:
+//     Serial.println("+- 1000 deg/s");
+//     break;
+//   case MPU6050_RANGE_2000_DEG:
+//     Serial.println("+- 2000 deg/s");
+//     break;
+//   }
 
-  mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
-  Serial.print("Filter bandwidth set to: ");
-  switch (mpu.getFilterBandwidth())
-  {
-  case MPU6050_BAND_260_HZ:
-    Serial.println("260 Hz");
-    break;
-  case MPU6050_BAND_184_HZ:
-    Serial.println("184 Hz");
-    break;
-  case MPU6050_BAND_94_HZ:
-    Serial.println("94 Hz");
-    break;
-  case MPU6050_BAND_44_HZ:
-    Serial.println("44 Hz");
-    break;
-  case MPU6050_BAND_21_HZ:
-    Serial.println("21 Hz");
-    break;
-  case MPU6050_BAND_10_HZ:
-    Serial.println("10 Hz");
-    break;
-  case MPU6050_BAND_5_HZ:
-    Serial.println("5 Hz");
-    break;
-  }
+//   mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+//   Serial.print("Filter bandwidth set to: ");
+//   switch (mpu.getFilterBandwidth())
+//   {
+//   case MPU6050_BAND_260_HZ:
+//     Serial.println("260 Hz");
+//     break;
+//   case MPU6050_BAND_184_HZ:
+//     Serial.println("184 Hz");
+//     break;
+//   case MPU6050_BAND_94_HZ:
+//     Serial.println("94 Hz");
+//     break;
+//   case MPU6050_BAND_44_HZ:
+//     Serial.println("44 Hz");
+//     break;
+//   case MPU6050_BAND_21_HZ:
+//     Serial.println("21 Hz");
+//     break;
+//   case MPU6050_BAND_10_HZ:
+//     Serial.println("10 Hz");
+//     break;
+//   case MPU6050_BAND_5_HZ:
+//     Serial.println("5 Hz");
+//     break;
+//   // }
 
-  Serial.println("");
-  delay(100);
-}
+//   Serial.println("");
+//   delay(100);
+// }
 
-bool encoder_init()
-{
-  Serial.println("Motor encoder Initiation");
+//bool encoder_init()
+//{
+//  Serial.println("Motor encoder Initiation");
+//
+//  ESP32Encoder::useInternalWeakPullResistors = UP; // Enable the weak pull up resistors
+//  encoder.attachHalfQuad(E2, E1);                 // Attache pins for use as encoder pins
+//  encoder.setCount(0);                             // set starting count value after attaching
+//
+//  Serial.println("");
+//  delay(100);
+//}
 
-  ESP32Encoder::useInternalWeakPullResistors = UP; // Enable the weak pull up resistors
-  encoder.attachHalfQuad(E2, E1);                 // Attache pins for use as encoder pins
-  encoder.setCount(0);                             // set starting count value after attaching
+// bool ads_init()
+// {
+//   Serial.println("SparkFun Displacement Sensor Initiation");
 
-  Serial.println("");
-  delay(100);
-}
-
-bool ads_init()
-{
-  Serial.println("SparkFun Displacement Sensor Initiation");
-
-  if (ads.begin() == false)
-  {
-    Serial.println(F("No bending sensor detected. Check wiring. Freezing..."));
-    while (1)
-      ;
-  }
-  delay(150);
-}
+//   if (ads.begin() == false)
+//   {
+//     Serial.println(F("No bending sensor detected. Check wiring. Freezing..."));
+//     while (1)
+//       ;
+//   }
+//   delay(150);
+// }
 
 // Event checkers --------------------------------------
 bool button_GREEN()
@@ -550,19 +506,19 @@ void get_DATA()
   // Elapsed time
   elapsed_time = millis();
 
-  // Wrist angle
-  if (ads.available())
-  {
-    angle = ads.getX();
-  }
-  //  Serial.print("Acceleration and Gyro: ");
-  //  Serial.println(millis()-elapsed_time);
+//   // Wrist angle
+//   if (ads.available())
+//   {
+//     angle = ads.getX();
+//   }
+//   //  Serial.print("Acceleration and Gyro: ");
+//   //  Serial.println(millis()-elapsed_time);
 
-  // t1 = millis();
-  // Distance
-//  distance = vl.readRangeResult(); // We need to use readRangeResult with continuous reading mode (readRange function has while loop inside it)
-  vl.startRange();
-  distance = vl.readRange();
+//   // t1 = millis();
+//   // Distance
+// //  distance = vl.readRangeResult(); // We need to use readRangeResult with continuous reading mode (readRange function has while loop inside it)
+//   vl.startRange();
+//   distance = vl.readRange();
 //  vl.rangingTest(&measure, false);
 //  if (measure.RangeStatus !=4)
 //  {
@@ -572,11 +528,11 @@ void get_DATA()
   // Serial.println(millis()-t1);
 
   // Encoder count
-  // t2 = millis();
-  encoder_count += count;
-  motor_speed = count;
-  motor_acc = motor_speed - motor_speed_prev;
-  motor_speed_prev = motor_speed;
+  // // t2 = millis();
+  // encoder_count += count;
+  // motor_speed = count;
+  // motor_acc = motor_speed - motor_speed_prev;
+  // motor_speed_prev = motor_speed;
   // Serial.print("Encoder: ");
   // Serial.println(millis()-t2);
 
@@ -592,13 +548,13 @@ void get_DATA()
 
   // Accecleration and Gyro
   // t4 = millis();
-  mpu.getEvent(&a, &g, &temp);
+  // mpu.getEvent(&a, &g, &temp);
   // Serial.print("Acceleration and Gyro: ");
   // Serial.println(millis()-t4);
 
   // Temperature
   // t5 = millis();
-  temperature = get_temperature();
+  // temperature = get_temperature();
   // Serial.print("temperature: ");
   // Serial.println(millis()-t5);
 }
@@ -626,46 +582,6 @@ void print_DATA()
     Serial.println("i");
     return;
   }
-  else if (state == JOYSTICK_MODE)
-  {
-    Serial.print("j, ");
-  }
-  else if (state == WRIST_MODE)
-  {
-    Serial.print("w, ");
-  }
-  Serial.print(elapsed_time);
-  Serial.print(", ");
-  Serial.print(angle);
-  Serial.print(", ");
-  Serial.print(distance);
-  Serial.print(", ");
-  Serial.print(encoder_count);
-  Serial.print(", ");
-  Serial.print(motor_speed);
-  Serial.print(", ");
-  Serial.print(motor_acc);
-  Serial.print(", ");
-  Serial.print(j_L);
-  Serial.print(", ");
-  Serial.print(j_R);
-  Serial.print(", ");
-  Serial.print(pedal);
-  Serial.print(", ");
-  Serial.print(a.acceleration.x);
-  Serial.print(", ");
-  Serial.print(a.acceleration.y);
-  Serial.print(", ");
-  Serial.print(a.acceleration.z);
-  Serial.print(", ");
-  Serial.print(g.gyro.x);
-  Serial.print(", ");
-  Serial.print(g.gyro.y);
-  Serial.print(", ");
-  Serial.print(g.gyro.z);
-  Serial.print(", ");
-  Serial.println(temperature);
-  
 }
 
 // General functions -----------------------------------
@@ -690,52 +606,52 @@ void motor_BACKWARD()
   digitalWrite(LED_PIN, HIGH);
 }
 
-// AD8495 (Thermal courple) functions
-float get_temperature()
-{
-  float AREF = 3.3;
-  int ADC_RESOLUTION = 12;
-  float reading, voltage;
-
-  reading = analogRead(TC);
-  voltage = reading * (AREF / (pow(2, ADC_RESOLUTION) - 1));
-  return (voltage - 1.25) / 0.005;
-}
-
-void calibrate()
-{
-  Serial.println("c");
-
-  while (Serial.available() > 0)
-    Serial.read(); // Flush all characters
-  // Serial.println(F("Press a key when the wrist is 0 degree angle"));
-  while (Serial.available() == 0)
-  {
-    ads.available();
-    delay(10); // Wait for user to press character
-    Serial.println("c");
-  }
-
-  ads.calibrateZero(); // Call when sensor is straight on both axis
-
-  Serial.println("0");
-
-  while (Serial.available() > 0)
-    Serial.read(); // Flush all characters
-  // Serial.println(F("Good. Now press a key when the wrist is bent at 45 degrees (extension)."));
-  while (Serial.available() == 0)
-  {
-    ads.available();
-    delay(10); // Wait for user to press character
-    Serial.println("0");
-  }
-
-  ads.calibrateX45(); // Call when sensor is 45 degrees on X axis
-
-  Serial.println("45");
-
-  calibrate_state = HIGH;
-}
+//// AD8495 (Thermal courple) functions
+//float get_temperature()
+//{
+//  float AREF = 3.3;
+//  int ADC_RESOLUTION = 12;
+//  float reading, voltage;
+//
+//  reading = analogRead(TC);
+//  voltage = reading * (AREF / (pow(2, ADC_RESOLUTION) - 1));
+//  return (voltage - 1.25) / 0.005;
+//}
+//
+//void calibrate()
+//{
+//  Serial.println("c");
+//
+//  while (Serial.available() > 0)
+//    Serial.read(); // Flush all characters
+//  // Serial.println(F("Press a key when the wrist is 0 degree angle"));
+//  while (Serial.available() == 0)
+//  {
+//    ads.available();
+//    delay(10); // Wait for user to press character
+//    Serial.println("c");
+//  }
+//
+//  ads.calibrateZero(); // Call when sensor is straight on both axis
+//
+//  Serial.println("0");
+//
+//  while (Serial.available() > 0)
+//    Serial.read(); // Flush all characters
+//  // Serial.println(F("Good. Now press a key when the wrist is bent at 45 degrees (extension)."));
+//  while (Serial.available() == 0)
+//  {
+//    ads.available();
+//    delay(10); // Wait for user to press character
+//    Serial.println("0");
+//  }
+//
+//  ads.calibrateX45(); // Call when sensor is 45 degrees on X axis
+//
+//  Serial.println("45");
+//
+//  calibrate_state = HIGH;
+//}
 
 void joystick_MODE()
 {
@@ -752,155 +668,155 @@ void joystick_MODE()
     motor_STOP();
   }
 }
-
-void wrist_MODE()
-{
-  int target_count;
-  if (angle <= MIN_ANGLE)
-  {
-    target_count = 0;
-  }
-  else if (angle > MAX_ANGLE)
-  {
-    target_count = MAX_EN;
-  }
-  else if (angle > MIN_ANGLE && angle <= MAX_ANGLE)
-  {
-    target_count = map(angle, MIN_ANGLE, MAX_ANGLE, 0, MAX_EN);
-  }
-  int duty = wrist_PID(encoder_count, target_count);
-
-  if (duty > 0)
-  {
-    ledcWrite(pwmChannel_1, duty);
-    ledcWrite(pwmChannel_2, LOW);
-    digitalWrite(LED_PIN, HIGH);
-  }
-  else if (duty < 0)
-  {
-    ledcWrite(pwmChannel_1, LOW);
-    ledcWrite(pwmChannel_2, -duty);
-    digitalWrite(LED_PIN, HIGH);
-  }
-  else if (duty == 0)
-  {
-    ledcWrite(pwmChannel_1, LOW);
-    ledcWrite(pwmChannel_2, LOW);
-  }
-}
-
-int wrist_PID(int current, int target)
-{
-  static int LastErr;
-  static float pwm, SumErr;
-
-  int Err = target - current;
-  SumErr += Err;
-  pwm = Kp * Err + Ki * SumErr + Kd * (Err - LastErr);
-  LastErr = Err;
-
-  if (pwm > MAX_PWM_VOLTAGE)
-  {
-    pwm = MAX_PWM_VOLTAGE;
-    SumErr = SumErr - Err; // anti-windup
-  }
-  else if (pwm < -MAX_PWM_VOLTAGE)
-  {
-    pwm = -MAX_PWM_VOLTAGE;
-    SumErr = SumErr - Err; // anti-windup
-  }
-  return (int)pwm;
-}
-
-// Wrist angle control 2 (Jul.07.2022)
-void wrist_MODE2()
-{
-  switch (state2)
-  {
-  case IDLE:
-  {
-    motor_STOP();
-    if (angle >= ON_ANGLE & distance < DIST_THRESHOLD)
-    {
-      motor_FORWARD();
-      state2 = CLOSING;
-    }
-    else if (angle < OFF_ANGLE && encoder_count > 0)
-    {
-      motor_BACKWARD();
-      state2 = OPENING;
-    }
-    break;
-  }
-  case CLOSING:
-  {
-    if (motor_speed >= HIGH_VELOCITY)
-    {
-      motor_status = true;
-    }
-    if (motor_speed < LOW_VELOCITY & motor_status == true)
-    {
-      motor_STOP();
-      motor_status = false;
-      state2 = GRASPING;
-    }
-    else if (angle < OFF_ANGLE)
-    {
-      motor_BACKWARD();
-      motor_status = false;
-      state2 = OPENING;
-    }
-    break;
-  }
-  case OPENING:
-  {
-    if (encoder_count <= 0)
-    {
-      motor_STOP();
-      state2 = IDLE;
-    }
-    else if (angle >= ON_ANGLE & distance < DIST_THRESHOLD)
-    {
-      motor_FORWARD();
-      state2 = CLOSING;
-    }
-    break;
-  }
-  case GRASPING:
-  {
-    if (angle < OFF_ANGLE)
-    {
-      motor_BACKWARD();
-      state2 = OPENING;
-    }
-//    else
-//    {
-//      grasp_count = encoder_count;
-//      int target_count = map(angle, OFF_ANGLE, ON_ANGLE, grasp_count + 50, grasp_count);
-//      int duty = wrist_PID(encoder_count, target_count);
 //
-//      if (duty > 0)
-//      {
-//        ledcWrite(pwmChannel_1, duty);
-//        ledcWrite(pwmChannel_2, LOW);
-//        digitalWrite(LED_PIN, HIGH);
-//      }
-//      else if (duty < 0)
-//      {
-//        ledcWrite(pwmChannel_1, LOW);
-//        ledcWrite(pwmChannel_2, -duty);
-//        digitalWrite(LED_PIN, HIGH);
-//      }
-//      else if (duty == 0)
-//      {
-//        ledcWrite(pwmChannel_1, LOW);
-//        ledcWrite(pwmChannel_2, LOW);
-//      }
+//void wrist_MODE()
+//{
+//  int target_count;
+//  if (angle <= MIN_ANGLE)
+//  {
+//    target_count = 0;
+//  }
+//  else if (angle > MAX_ANGLE)
+//  {
+//    target_count = MAX_EN;
+//  }
+//  else if (angle > MIN_ANGLE && angle <= MAX_ANGLE)
+//  {
+//    target_count = map(angle, MIN_ANGLE, MAX_ANGLE, 0, MAX_EN);
+//  }
+//  int duty = wrist_PID(encoder_count, target_count);
+//
+//  if (duty > 0)
+//  {
+//    ledcWrite(pwmChannel_1, duty);
+//    ledcWrite(pwmChannel_2, LOW);
+//    digitalWrite(LED_PIN, HIGH);
+//  }
+//  else if (duty < 0)
+//  {
+//    ledcWrite(pwmChannel_1, LOW);
+//    ledcWrite(pwmChannel_2, -duty);
+//    digitalWrite(LED_PIN, HIGH);
+//  }
+//  else if (duty == 0)
+//  {
+//    ledcWrite(pwmChannel_1, LOW);
+//    ledcWrite(pwmChannel_2, LOW);
+//  }
+//}
+//
+//int wrist_PID(int current, int target)
+//{
+//  static int LastErr;
+//  static float pwm, SumErr;
+//
+//  int Err = target - current;
+//  SumErr += Err;
+//  pwm = Kp * Err + Ki * SumErr + Kd * (Err - LastErr);
+//  LastErr = Err;
+//
+//  if (pwm > MAX_PWM_VOLTAGE)
+//  {
+//    pwm = MAX_PWM_VOLTAGE;
+//    SumErr = SumErr - Err; // anti-windup
+//  }
+//  else if (pwm < -MAX_PWM_VOLTAGE)
+//  {
+//    pwm = -MAX_PWM_VOLTAGE;
+//    SumErr = SumErr - Err; // anti-windup
+//  }
+//  return (int)pwm;
+//}
+//
+//// Wrist angle control 2 (Jul.07.2022)
+//void wrist_MODE2()
+//{
+//  switch (state2)
+//  {
+//  case IDLE:
+//  {
+//    motor_STOP();
+//    if (angle >= ON_ANGLE & distance < DIST_THRESHOLD)
+//    {
+//      motor_FORWARD();
+//      state2 = CLOSING;
 //    }
-    break;
-  }
-
-  default:
-    break;
-  }
-}
+//    else if (angle < OFF_ANGLE && encoder_count > 0)
+//    {
+//      motor_BACKWARD();
+//      state2 = OPENING;
+//    }
+//    break;
+//  }
+//  case CLOSING:
+//  {
+//    if (motor_speed >= HIGH_VELOCITY)
+//    {
+//      motor_status = true;
+//    }
+//    if (motor_speed < LOW_VELOCITY & motor_status == true)
+//    {
+//      motor_STOP();
+//      motor_status = false;
+//      state2 = GRASPING;
+//    }
+//    else if (angle < OFF_ANGLE)
+//    {
+//      motor_BACKWARD();
+//      motor_status = false;
+//      state2 = OPENING;
+//    }
+//    break;
+//  }
+//  case OPENING:
+//  {
+//    if (encoder_count <= 0)
+//    {
+//      motor_STOP();
+//      state2 = IDLE;
+//    }
+//    else if (angle >= ON_ANGLE & distance < DIST_THRESHOLD)
+//    {
+//      motor_FORWARD();
+//      state2 = CLOSING;
+//    }
+//    break;
+//  }
+//  case GRASPING:
+//  {
+//    if (angle < OFF_ANGLE)
+//    {
+//      motor_BACKWARD();
+//      state2 = OPENING;
+//    }
+////    else
+////    {
+////      grasp_count = encoder_count;
+////      int target_count = map(angle, OFF_ANGLE, ON_ANGLE, grasp_count + 50, grasp_count);
+////      int duty = wrist_PID(encoder_count, target_count);
+////
+////      if (duty > 0)
+////      {
+////        ledcWrite(pwmChannel_1, duty);
+////        ledcWrite(pwmChannel_2, LOW);
+////        digitalWrite(LED_PIN, HIGH);
+////      }
+////      else if (duty < 0)
+////      {
+////        ledcWrite(pwmChannel_1, LOW);
+////        ledcWrite(pwmChannel_2, -duty);
+////        digitalWrite(LED_PIN, HIGH);
+////      }
+////      else if (duty == 0)
+////      {
+////        ledcWrite(pwmChannel_1, LOW);
+////        ledcWrite(pwmChannel_2, LOW);
+////      }
+////    }
+//    break;
+//  }
+//
+//  default:
+//    break;
+//  }
+//}
