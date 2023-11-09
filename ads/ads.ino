@@ -43,6 +43,7 @@ void setup()
 
   if (myFlexSensor.begin() == false)
   {
+    Serial.println("hello");
     Serial.println(F("No sensor detected. Check wiring. Freezing..."));
     while (1)
       ;
@@ -58,6 +59,7 @@ void setup()
 
 void loop()
 {
+  // Serial.println("hello, main loop");
 //  myFlexSensor.clearCalibration();
   if (myFlexSensor.available() == true)
   {

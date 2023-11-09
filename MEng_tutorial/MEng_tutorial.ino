@@ -1,7 +1,7 @@
 /*
  * author Jungpyo Lee: <jungpyolee@berkeley.edu> (c.)
  * creation date : Jan. 20. 2022
- * last update : Oct. 25. 2023
+ * last update : Nov. 03. 2023
  * version 1.0
  * changed: change code for the tutorial device (wrist angle control mode, no IMU, no thermocouple, use LV_6180X)
  * project : Dorsal Grasper 2.0
@@ -50,7 +50,7 @@
 // Create instance --------------------------------------
 ADS ads;                                  // Create instance of the Angular Displacement Sensor (ADS) class
 ESP32Encoder encoder;                     // Create instance of the ESP32 encoder class
-Adafruit_VL6180X vl = Adafruit_VL6180X(); // Create instance of the distance sensor class
+// Adafruit_VL6180X vl = Adafruit_VL6180X(); // Create instance of the distance sensor class
 
 // Setup interrupt variables ----------------------------
 volatile int count = 0;             // encoder count for speed
@@ -194,8 +194,12 @@ void loop()
     if (incoming == 'w')
     {
       state = WRIST_MODE;
-      timerRestart(timer0);
-      timerRestart(timer1);
+      // timerRestart(timer0);
+      timerWrite(timer0, 0);
+      timerStart(timer0);
+      timerWrite(timer1, 0);
+      timerStart(timer1);
+      // timerRestart(timer1);
     }
     if (incoming == 'r')
     {
@@ -221,14 +225,17 @@ void loop()
     byte incoming = Serial.read();
     if (timer0_check)
     {
+      Serial.println("timer 0");
       portENTER_CRITICAL(&timerMux0);
       timer0_check = false;
       portEXIT_CRITICAL(&timerMux0);
       get_DATA();
       print_DATA();
+      delay(100);
     }
     if (timer1_check)
     {
+      // Serial.println("timer 1");
       portENTER_CRITICAL(&timerMux1);
       timer1_check = false;
       portEXIT_CRITICAL(&timerMux1);
@@ -246,28 +253,31 @@ void loop()
       encoder_count = 0;
     }
     wrist_MODE2();
+    // Serial.println('w');
     break;
   }
   }
 }
 
 // Setup functions --------------------------------------
-bool vl6180x_init()
+void vl6180x_init()
 {
   Serial.println("Adafruit VL6180x test!");
-  if (!vl.begin())
-  {
-    Serial.println("Failed to find VL6189x sensor");
-    while (1)
-      ;
-  }
+  vl.begin();
+  delay(100);
+  // if (!vl.begin())
+  // {
+  //   Serial.println("Failed to find VL6180x sensor");
+  //   while (1)
+  //     ;
+  // }
   Serial.println("Sensor found!");
   Serial.println("");
   vl.startRangeContinuous(50);
   delay(100);
 }
 
-bool encoder_init()
+void encoder_init()
 {
   Serial.println("Motor encoder Initiation");
 
@@ -279,7 +289,7 @@ bool encoder_init()
   delay(100);
 }
 
-bool ads_init()
+void ads_init()
 {
   Serial.println("SparkFun Displacement Sensor Initiation");
 
@@ -316,14 +326,14 @@ void get_DATA()
   {
     angle = ads.getX();
   }
-  //  Serial.print("Acceleration and Gyro: ");
-  //  Serial.println(millis()-elapsed_time);
+  // Serial.print("Acceleration and Gyro: ");
+  // Serial.println(millis()-elapsed_time);
 
   // t1 = millis();
   // Distance
-//  distance = vl.readRangeResult(); // We need to use readRangeResult with continuous reading mode (readRange function has while loop inside it)
-  vl.startRange();
-  distance = vl.readRange();
+ distance = vl.readRangeResult(); // We need to use readRangeResult with continuous reading mode (readRange function has while loop inside it)
+  // vl.startRange();
+  // distance = vl.readRange();
 
   // Encoder count
   // t2 = millis();
@@ -366,8 +376,8 @@ void print_DATA()
   Serial.print(", ");
   Serial.print(angle);
   Serial.print(", ");
-  Serial.print(distance);
-  Serial.print(", ");
+  // Serial.print(distance);
+  // Serial.print(", ");
   Serial.print(encoder_count);
   Serial.print(", ");
   Serial.print(motor_speed);

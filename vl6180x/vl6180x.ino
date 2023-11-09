@@ -13,17 +13,20 @@ void setup() {
   }
   
   Serial.println("Adafruit VL6180x test!");
-  if (! vl.begin()) {
-    Serial.println("Failed to find sensor");
-    while (1);
-  }
-  Serial.println("Sensor found!");
+  // while(! vl.begin())
+  // {
+
+  // }
+  vl.begin();
+  delay(1000);
+  vl.startRangeContinuous(50);
+  delay(100);
 }
 
 void loop() {
-//  float lux = vl.readLux(VL6180X_ALS_GAIN_5);
+ float lux = vl.readLux(VL6180X_ALS_GAIN_5);
 
-//  Serial.print("Lux: "); Serial.println(lux);
+ Serial.print("Lux: "); Serial.println(lux);
   
   range = vl.readRange();
   uint8_t status = vl.readRangeStatus();

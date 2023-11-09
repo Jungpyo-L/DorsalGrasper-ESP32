@@ -10,7 +10,7 @@ void setup()
 {
   Serial.begin (115200);  
 //  Wire.begin (23, 22);   // sda= GPIO_23 /scl= GPIO_22  //ESP32-S2
-  Wire.begin (23, 22);
+  Wire.begin (23,22);
 }
 
 void Scanner ()
@@ -19,7 +19,7 @@ void Scanner ()
   Serial.println ("I2C scanner. Scanning ...");
   byte count = 0;
 
-  Wire.begin();
+  Wire.begin(23,22);
   for (byte i = 8; i < 120; i++)
   {
     Wire.beginTransmission (i);          // Begin I2C transmission Address (i)
