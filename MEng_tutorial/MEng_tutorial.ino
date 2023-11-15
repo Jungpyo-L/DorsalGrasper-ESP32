@@ -50,7 +50,7 @@
 // Create instance --------------------------------------
 ADS ads;                                  // Create instance of the Angular Displacement Sensor (ADS) class
 ESP32Encoder encoder;                     // Create instance of the ESP32 encoder class
-// Adafruit_VL6180X vl = Adafruit_VL6180X(); // Create instance of the distance sensor class
+Adafruit_VL6180X vl = Adafruit_VL6180X(); // Create instance of the distance sensor class
 
 // Setup interrupt variables ----------------------------
 volatile int count = 0;             // encoder count for speed
@@ -132,6 +132,8 @@ void setup()
   Serial.begin(115200);
   Wire.begin(SDA, SCL); // setup for i2c pins of ESP32, sda= GPIO_23 /scl= GPIO_22
   Serial.println("Start Setup");
+  pinMode(JOYSTICK_L, INPUT);
+  pinMode(JOYSTICK_R, INPUT);
 
   // wait for serial port to open on native usb devices
   while (!Serial)
@@ -140,9 +142,9 @@ void setup()
   }
 
   // initialize sensor
-  vl6180x_init();
+  // vl6180x_init();
   encoder_init();
-  ads_init();
+  // ads_init();
 
   // initialize motor
   Serial.println("Motor PWM Initiation");
@@ -167,7 +169,7 @@ void setup()
   Serial.println("Timer1 initializatoin");
   timer1 = timerBegin(1, 80, true);             // timer 0, MWDT clock period = 12.5 ns * TIMGn_Tx_WDT_CLK_PRESCALE -> 12.5 ns * 80 -> 1000 ns = 1 us, countUp
   timerAttachInterrupt(timer1, &onTime1, true); // edge (not level) triggered
-  timerAlarmWrite(timer1, 50000, true);         // 100000 * 1 us = 50 ms, autoreload true (20 Hz)
+  timerAlarmWrite(timer1, 50000, true);        // 50000 * 1 us = 50 ms, autoreload true (20 Hz)
   timerAlarmEnable(timer1);                     // enable timer0
   timerStop(timer1);
 
@@ -182,8 +184,6 @@ void loop()
   case INITIALIZATION:
   {
     motor_STOP();
-    timerStop(timer0);
-    timerStop(timer1);
     byte incoming = Serial.read();
 
     if (incoming == 'c')
@@ -191,15 +191,22 @@ void loop()
       state = CALIBRATION;
       calibrate_state = LOW;
     }
-    if (incoming == 'w')
+    if (incoming == 'j')
     {
-      state = WRIST_MODE;
-      // timerRestart(timer0);
+      state = JOYSTICK_MODE;
       timerWrite(timer0, 0);
       timerStart(timer0);
       timerWrite(timer1, 0);
       timerStart(timer1);
-      // timerRestart(timer1);
+      // Serial.println("hi");
+    }
+    if (incoming == 'w')
+    {
+      state = WRIST_MODE;
+      timerWrite(timer0, 0);
+      timerStart(timer0);
+      timerWrite(timer1, 0);
+      timerStart(timer1);
     }
     if (incoming == 'r')
     {
@@ -220,18 +227,17 @@ void loop()
     break;
   }
 
-  case WRIST_MODE:
+  case JOYSTICK_MODE:
   {
     byte incoming = Serial.read();
     if (timer0_check)
     {
-      Serial.println("timer 0");
+      // Serial.println("timer 0");
       portENTER_CRITICAL(&timerMux0);
       timer0_check = false;
       portEXIT_CRITICAL(&timerMux0);
       get_DATA();
       print_DATA();
-      delay(100);
     }
     if (timer1_check)
     {
@@ -239,7 +245,7 @@ void loop()
       portENTER_CRITICAL(&timerMux1);
       timer1_check = false;
       portEXIT_CRITICAL(&timerMux1);
-      wrist_MODE2();
+      joystick_MODE();
     }
     if (incoming == 'i')
     {
@@ -252,7 +258,42 @@ void loop()
     {
       encoder_count = 0;
     }
-    wrist_MODE2();
+    joystick_MODE();
+    break;
+  }
+
+  case WRIST_MODE:
+  {
+    byte incoming = Serial.read();
+    if (timer0_check)
+    {
+      // Serial.println("timer 0");
+      portENTER_CRITICAL(&timerMux0);
+      timer0_check = false;
+      portEXIT_CRITICAL(&timerMux0);
+      get_DATA();
+      print_DATA();
+    }
+    if (timer1_check)
+    {
+      // Serial.println("timer 1");
+      portENTER_CRITICAL(&timerMux1);
+      timer1_check = false;
+      portEXIT_CRITICAL(&timerMux1);
+      wrist_MODE3();
+    }
+    if (incoming == 'i')
+    {
+      motor_STOP();
+      timerStop(timer0);
+      timerStop(timer1);
+      state = INITIALIZATION;
+    }
+    if (incoming == 'r')
+    {
+      encoder_count = 0;
+    }
+    // wrist_MODE2();
     // Serial.println('w');
     break;
   }
@@ -322,67 +363,53 @@ void get_DATA()
   elapsed_time = millis();
 
   // Wrist angle
-  if (ads.available())
-  {
-    angle = ads.getX();
-  }
-  // Serial.print("Acceleration and Gyro: ");
-  // Serial.println(millis()-elapsed_time);
+  // if (ads.available())
+  // {
+  //   angle = ads.getX();
+  // }
 
   // t1 = millis();
   // Distance
- distance = vl.readRangeResult(); // We need to use readRangeResult with continuous reading mode (readRange function has while loop inside it)
+//  distance = vl.readRangeResult(); // We need to use readRangeResult with continuous reading mode (readRange function has while loop inside it)
   // vl.startRange();
   // distance = vl.readRange();
 
   // Encoder count
-  // t2 = millis();
   encoder_count += count;
   motor_speed = count;
   motor_acc = motor_speed - motor_speed_prev;
   motor_speed_prev = motor_speed;
-  // Serial.print("Encoder: ");
-  // Serial.println(millis()-t2);
+
+  // Joystick
+  j_L = digitalRead(JOYSTICK_L);
+  j_R = digitalRead(JOYSTICK_R);
+
 }
 
 void print_DATA()
 {
-//  if (state == WRIST_MODE & state2 == IDLE)
-//  {
-//    Serial.println("IDLE");
-//  }
-//  else if (state == WRIST_MODE & state2 == CLOSING)
-//  {
-//    Serial.println("CLOSING");
-//  }
-//  else if (state == WRIST_MODE & state2 == OPENING)
-//  {
-//    Serial.println("OPENING");
-//  }
-//  else if (state == WRIST_MODE & state2 == GRASPING)
-//  {
-//    Serial.println("GRASPING");
-//  }
-  if (state == INITIALIZATION)
-  {
-    Serial.println("i");
-    return;
-  }
-  else if (state == WRIST_MODE)
+  if (state == WRIST_MODE)
   {
     Serial.print("w, ");
+  } else if (state == JOYSTICK_MODE)
+  {
+    Serial.print("j, ");
   }
   Serial.print(elapsed_time);
   Serial.print(", ");
-  Serial.print(angle);
-  Serial.print(", ");
+  // Serial.print(angle);
+  // Serial.print(", ");
   // Serial.print(distance);
   // Serial.print(", ");
   Serial.print(encoder_count);
   Serial.print(", ");
   Serial.print(motor_speed);
   Serial.print(", ");
-  Serial.println(motor_acc);
+  Serial.print(motor_acc);
+  Serial.print(", ");
+  Serial.print(j_L);
+  Serial.print(", ");
+  Serial.println(j_R);
 }
 
 // General functions -----------------------------------
@@ -441,6 +468,22 @@ void calibrate()
   Serial.println("45");
 
   calibrate_state = HIGH;
+}
+
+void joystick_MODE()
+{
+  if (digitalRead(JOYSTICK_L) == true)
+  {
+    motor_FORWARD();
+  }
+  else if (digitalRead(JOYSTICK_R) == true)
+  {
+    motor_BACKWARD();
+  }
+  else
+  {
+    motor_STOP();
+  }
 }
 
 
@@ -551,6 +594,76 @@ void wrist_MODE2()
       state2 = IDLE;
     }
     else if (angle >= ON_ANGLE & distance < DIST_THRESHOLD)
+    {
+      motor_FORWARD();
+      state2 = CLOSING;
+    }
+    break;
+  }
+  case GRASPING:
+  {
+    if (angle < OFF_ANGLE)
+    {
+      motor_BACKWARD();
+      state2 = OPENING;
+    }
+    break;
+  }
+
+  default:
+    break;
+  }
+}
+
+
+// Wrist angle control 3 for MEng team which doesn't include distance sensor(Nov.13.2023)
+void wrist_MODE3()
+{
+  switch (state2)
+  {
+  case IDLE:
+  {
+    motor_STOP();
+    if (angle >= ON_ANGLE)
+    {
+      motor_FORWARD();
+      state2 = CLOSING;
+    }
+    else if (angle < OFF_ANGLE && encoder_count > 0)
+    {
+      motor_BACKWARD();
+      state2 = OPENING;
+    }
+    break;
+  }
+  case CLOSING:
+  {
+    if (motor_speed >= HIGH_VELOCITY)
+    {
+      motor_status = true;
+    }
+    if (motor_speed < LOW_VELOCITY & motor_status == true)
+    {
+      motor_STOP();
+      motor_status = false;
+      state2 = GRASPING;
+    }
+    else if (angle < OFF_ANGLE)
+    {
+      motor_BACKWARD();
+      motor_status = false;
+      state2 = OPENING;
+    }
+    break;
+  }
+  case OPENING:
+  {
+    if (encoder_count <= 0)
+    {
+      motor_STOP();
+      state2 = IDLE;
+    }
+    else if (angle >= ON_ANGLE)
     {
       motor_FORWARD();
       state2 = CLOSING;

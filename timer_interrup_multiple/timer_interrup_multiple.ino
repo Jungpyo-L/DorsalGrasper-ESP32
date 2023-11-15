@@ -51,8 +51,11 @@ ESP32Encoder encoder;                     // Create instance of the ESP32 encode
 // Setup interrupt variables ----------------------------
 volatile int count = 0;             // encoder count for speed
 volatile bool timer0_check = false; // check timer interrupt 0
+volatile bool timer1_check = false; // check timer interrupt 1
 hw_timer_t *timer0 = NULL;
+hw_timer_t *timer1 = NULL;
 portMUX_TYPE timerMux0 = portMUX_INITIALIZER_UNLOCKED;
+portMUX_TYPE timerMux1 = portMUX_INITIALIZER_UNLOCKED;
 
 // Setup interrupt functions ----------------------------
 void IRAM_ATTR onTime0()
@@ -60,6 +63,13 @@ void IRAM_ATTR onTime0()
   portENTER_CRITICAL_ISR(&timerMux0);
   timer0_check = true; // the function to be called when timer interrupt is triggered
   portEXIT_CRITICAL_ISR(&timerMux0);
+}
+
+void IRAM_ATTR onTime1()
+{ // this can be used for constant data acquisition
+  portENTER_CRITICAL_ISR(&timerMux1);
+  timer1_check = true; // the function to be called when timer interrupt is triggered
+  portEXIT_CRITICAL_ISR(&timerMux1);
 }
 
 // Setup variables --------------------------------------
@@ -99,6 +109,13 @@ void setup()
   timerAlarmWrite(timer0, 50000, true);        // 50000 * 1 us = 50 ms, autoreload true (20 Hz)
   timerAlarmEnable(timer0);                     // enable timer0
   timerStop(timer0);
+
+  Serial.println("Timer1 initializatoin");
+  timer1 = timerBegin(1, 80, true);             // timer 1, MWDT clock period = 12.5 ns * TIMGn_Tx_WDT_CLK_PRESCALE -> 12.5 ns * 80 -> 1000 ns = 1 us, countUp
+  timerAttachInterrupt(timer1, &onTime1, true); // edge (not level) triggered
+  timerAlarmWrite(timer1, 100000, true);        // 50000 * 1 us = 50 ms, autoreload true (20 Hz)
+  timerAlarmEnable(timer1);                     // enable timer0
+  timerStop(timer1);
 
   Serial.println("");
   Serial.println("Setup done");

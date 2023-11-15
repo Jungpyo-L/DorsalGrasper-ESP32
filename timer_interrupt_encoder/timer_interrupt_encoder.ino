@@ -66,14 +66,14 @@ void IRAM_ATTR onTime0()
   portEXIT_CRITICAL_ISR(&timerMux0);
 }
 
-//void IRAM_ATTR onTime1()
-//{ // this can be used for the motor operation
-//  portENTER_CRITICAL_ISR(&timerMux1);
-//  count = -encoder.getCount();
-//  encoder.clearCount();
-//  timer1_check = true; // the function to be called when timer interrupt is triggered
-//  portEXIT_CRITICAL_ISR(&timerMux1);
-//}
+void IRAM_ATTR onTime1()
+{ // this can be used for constant data acquisition
+  portENTER_CRITICAL_ISR(&timerMux1);
+  count = -encoder.getCount();
+  encoder.clearCount();
+  timer1_check = true; // the function to be called when timer interrupt is triggered
+  portEXIT_CRITICAL_ISR(&timerMux1);
+}
 
 // Setup variables --------------------------------------
 const int freq = 20000;
@@ -88,6 +88,7 @@ bool calibrate_state;
 
 // Record variables -------------------------------------
 int state = INITIALIZATION;                     // state for the main loop
+unsigned long elapsed_time;
 int encoder_count;                              // position of the motor
 int motor_speed = 0;                            // speed of the motor (unit is count)
 int motor_speed_prev;                           // to calculate motor acceleration
@@ -113,12 +114,14 @@ void setup()
   timerAlarmEnable(timer0);                     // enable timer0
   timerStop(timer0);
 
-//  Serial.println("Timer1 initializatoin");
-//  timer1 = timerBegin(1, 80, true);             // timer 0, MWDT clock period = 12.5 ns * TIMGn_Tx_WDT_CLK_PRESCALE -> 12.5 ns * 80 -> 1000 ns = 1 us, countUp
-//  timerAttachInterrupt(timer1, &onTime1, true); // edge (not level) triggered
-//  timerAlarmWrite(timer1, 50000, true);         // 100000 * 1 us = 50 ms, autoreload true (20 Hz)
-//  timerAlarmEnable(timer1);                     // enable timer0
-//  timerStop(timer1);
+  Serial.println("Timer1 initializatoin");
+  timer1 = timerBegin(1, 80, true);             // timer 1, MWDT clock period = 12.5 ns * TIMGn_Tx_WDT_CLK_PRESCALE -> 12.5 ns * 80 -> 1000 ns = 1 us, countUp
+  timerAttachInterrupt(timer1, &onTime1, true); // edge (not level) triggered
+  timerAlarmWrite(timer1, 50000, true);        // 50000 * 1 us = 50 ms, autoreload true (20 Hz)
+  timerAlarmEnable(timer1);                     // enable timer0
+  timerStop(timer1);
+
+  encoder_init();
 
   Serial.println("");
   Serial.println("Setup done");
@@ -130,19 +133,15 @@ void loop()
   {
   case INITIALIZATION:
   {
-    timerStop(timer0);
-//    timerStop(timer1);
     byte incoming = Serial.read();
 
     if (incoming == 't')
     {
       state = TEST_MODE;
-      // timerWrite(timer0, 0);
-//      timerStart(timer0);
-      // timerWrite(timer1, 0);
-//      timerStart(timer1);
-      timerRestart(timer0);
-//      timerRestart(timer1);
+      timerWrite(timer0, 0);
+      timerStart(timer0);
+      timerWrite(timer1, 0);
+      timerStart(timer1);
     }
     Serial.println('i');
     delay(100);
@@ -152,21 +151,75 @@ void loop()
   case TEST_MODE:
   {
     byte incoming = Serial.read();
-    // Serial.println("test mode");
     if (timer0_check)
     {
-      Serial.println("timer 0");
       portENTER_CRITICAL(&timerMux0);
       timer0_check = false;
       portEXIT_CRITICAL(&timerMux0);
+      get_DATA();
+      print_DATA();
+    }
+    if (timer1_check)
+    {
+      portENTER_CRITICAL(&timerMux1);
+      timer1_check = false;
+      portEXIT_CRITICAL(&timerMux1);
     }
     if (incoming == 'i')
     {
       timerStop(timer0);
-//      timerStop(timer1);
+      timerStop(timer1);
       state = INITIALIZATION;
     }
     break;
   }
   }
+}
+
+
+void encoder_init()
+{
+  Serial.println("Motor encoder Initiation");
+
+  ESP32Encoder::useInternalWeakPullResistors = UP; // Enable the weak pull up resistors
+  encoder.attachHalfQuad(E2, E1);                 // Attache pins for use as encoder pins
+  encoder.setCount(0);                             // set starting count value after attaching
+
+  Serial.println("");
+  delay(100);
+}
+
+void get_DATA()
+{
+  /*
+   * int state = INITIALIZATION;
+   * sensors_event_t a, g, temp; // mpu6050
+   * uint8_t distance, vl_status; // vl6080x
+   * unsigned long elapsed_time; // elapsed time
+   * float temperature; // temperature from ad8405
+   * int encoder_count; // position of the motor
+   * uint8_t j_L, j_R, pedal; // joystick left, right, and pedal input
+   * float angle; // wrist angle from ads
+   */
+  // Elapsed time
+  elapsed_time = millis();
+  // vl.startRange();
+  // distance = vl.readRange();
+  encoder_count += count;
+  motor_speed = count;
+  motor_acc = motor_speed - motor_speed_prev;
+  motor_speed_prev = motor_speed;
+}
+
+void print_DATA()
+{
+  Serial.print(elapsed_time);
+  Serial.print(", ");
+  // Serial.print(distance);
+  // Serial.print(", ");
+  Serial.print(encoder_count);
+  Serial.print(", ");
+  Serial.print(motor_speed);
+  Serial.print(", ");
+  Serial.println(motor_acc);
 }
