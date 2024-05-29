@@ -47,18 +47,19 @@ void setup()
     while (1)
       ;
   }
-  /*
-  Serial.println("clear calibration");
-  myFlexSensor.clearCalibration();
-  delay(500);
-  Serial.println("clear done");
-  myFlexSensor.calibrateZero();
-*/
+  
+  // Serial.println("clear calibration");
+  // myFlexSensor.clearCalibration();
+  // delay(500);
+  // Serial.println("clear done");
+  // myFlexSensor.calibrateZero();
+
 }
 
 void loop()
 {
 //  myFlexSensor.clearCalibration();
+// Serial.println("Hi");
   if (myFlexSensor.available() == true)
   {
     Serial.print(myFlexSensor.getX());

@@ -9,8 +9,8 @@
 void setup()
 {
   Serial.begin (115200);  
-//  Wire.begin (23, 22);   // sda= GPIO_23 /scl= GPIO_22  //ESP32-S2
-  Wire.begin (23, 22);
+ Wire.begin (23, 22);   // sda= GPIO_23 /scl= GPIO_22  //ESP32-S2
+  // Wire.begin (21, 22);
 }
 
 void Scanner ()
