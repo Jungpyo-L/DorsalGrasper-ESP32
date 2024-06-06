@@ -65,7 +65,7 @@ void IRAM_ATTR onTime0()
 void IRAM_ATTR onTime1()
 { // this can be used for the motor operation
   portENTER_CRITICAL_ISR(&timerMux1);
-  count = -encoder.getCount();
+  count = encoder.getCount();
   encoder.clearCount();
   timer1_check = true; // the function to be called when timer interrupt is triggered
   portEXIT_CRITICAL_ISR(&timerMux1);
@@ -93,10 +93,10 @@ const int WRIST_PWM = 250; // motor PWM value for the wrist angle mode
 const int MAX_EN = 1200; // encoder value in fully closed finger
 const int MAX_ANGLE = 45; // maximum angle of the wrist
 const int MIN_ANGLE = 10; // minimum angle of the wrist
-const int ON_ANGLE = 20; // on angle to close the finger
-const int OFF_ANGLE = 10; // off angle to open the inger
-const int HIGH_VELOCITY = 70; // High threshold velocity
-const int LOW_VELOCITY = 65; // Low threshold velocity
+const int ON_ANGLE = 60; // on angle to close the finger
+const int OFF_ANGLE = 25; // off angle to open the inger
+const int HIGH_VELOCITY = 50; // High threshold velocity
+const int LOW_VELOCITY = 45; // Low threshold velocity
 bool calibrate_state;
 
 // Record variables -------------------------------------
@@ -173,15 +173,15 @@ void setup()
   timerWrite(timer1, 0);
   timerStart(timer1);
 
-  tp.DotStar_SetPower( false ); 
-  // tp.DotStar_SetBrightness( 20 );
-  // delay(1000);
-  // tp.DotStar_SetPixelColor( 255, 0, 0 );
-  // delay(1000);
-  // tp.DotStar_SetPixelColor( 0, 255, 0 );
-  // delay(1000);
-  // tp.DotStar_SetPixelColor( 0, 0, 255 );
-  // delay(1000);
+  // tp.DotStar_SetPower( false ); 
+  tp.DotStar_SetBrightness( 20 );
+  delay(1000);
+  tp.DotStar_SetPixelColor( 255, 0, 0 );
+  delay(1000);
+  tp.DotStar_SetPixelColor( 0, 255, 0 );
+  delay(1000);
+  tp.DotStar_SetPixelColor( 0, 0, 255 );
+  delay(1000);
 } 
 
 void loop()
@@ -208,15 +208,15 @@ void loop()
       portEXIT_CRITICAL(&timerMux1);
       wrist_MODE();
     }
-    if (digitalRead(CALIBRATION_BUTTON) == HIGH)
+    if (digitalRead(CALIBRATION_BUTTON) == HIGH || incoming == 'c')
     {
-      // motor_STOP();
+      motor_STOP();
       // timerStop(timer0);
       // timerStop(timer1);
       calibrate_state = LOW;
       state = CALIBRATION;
     }
-    if (digitalRead(JOYSTICK_BUTTON) == HIGH)
+    if (digitalRead(JOYSTICK_BUTTON) == HIGH || incoming == 'j')
     {
       state = JOYSTICK_MODE;
       // timerWrite(timer0, 0);
@@ -410,11 +410,14 @@ void motor_BACKWARD()
 
 void calibrate()
 {
-
+  Serial.println("clear calibration");
+  ads.clearCalibration();
+  Serial.println("clear done");
+  delay(500);
   // Step 1. Set wrist angle to 0
   Serial.println("Set wrist angle to 0 degrees.");
   // led lights up to indicate user to commence calibration step
-  tp.DotStar_SetPixelColor( 0, 255, 0 );
+  tp.DotStar_SetPixelColor( 255, 0, 0 );
   waitForButtonPress();
 
   ads.available();
@@ -424,7 +427,7 @@ void calibrate()
   //Step 2. Set wrist angle to 45
   Serial.println("Set wrist angle to 45 degrees.");
   //led lights up to indicate user to commence calibration step
-  tp.DotStar_SetPixelColor( 0, 0, 255 );
+  tp.DotStar_SetPixelColor( 0, 255, 0 );
   waitForButtonPress();
 
   ads.available();
@@ -434,6 +437,7 @@ void calibrate()
   Serial.println("Calibration completed.");
   delay(10);
   calibrate_state = HIGH;
+  tp.DotStar_SetPixelColor( 0, 0, 255 );
 }
 
 void waitForButtonPress()
@@ -444,7 +448,7 @@ void waitForButtonPress()
     delay(50); // Poll the button state
   }
 
-  delay(200); // Debounce delay
+  delay(500); // Debounce delay
 
 }
 
@@ -472,7 +476,7 @@ void wrist_MODE()
   {
   case IDLE:
   {
-    tp.DotStar_SetPixelColor( 255, 0, 0 );
+    // tp.DotStar_SetPixelColor( 255, 0, 0 );
     motor_STOP();
     if (angle >= ON_ANGLE)
     {
@@ -490,7 +494,7 @@ void wrist_MODE()
   }
   case CLOSING:
   {
-    tp.DotStar_SetPixelColor( 0, 255, 0 );
+    // tp.DotStar_SetPixelColor( 0, 255, 0 );
     if (motor_speed >= HIGH_VELOCITY)
     {
       motor_status = true;
@@ -515,7 +519,7 @@ void wrist_MODE()
   }
   case OPENING:
   {
-    tp.DotStar_SetPixelColor( 0, 0, 255 );
+    // tp.DotStar_SetPixelColor( 0, 0, 255 );
     if (encoder_count <= 0)
     {
       motor_STOP();

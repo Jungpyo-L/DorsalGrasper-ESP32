@@ -39,7 +39,8 @@ void setup()
     ;
   Serial.println("SparkFun Displacement Sensor Example");
 
-  Wire.begin(23, 22);
+  // Wire.begin(23, 22);
+  Wire.begin(21, 22); // tinypico
 
   if (myFlexSensor.begin() == false)
   {
@@ -48,11 +49,11 @@ void setup()
       ;
   }
   
-  // Serial.println("clear calibration");
-  // myFlexSensor.clearCalibration();
-  // delay(500);
-  // Serial.println("clear done");
-  // myFlexSensor.calibrateZero();
+  Serial.println("clear calibration");
+  myFlexSensor.clearCalibration();
+  delay(500);
+  Serial.println("clear done");
+  myFlexSensor.calibrateZero();
 
 }
 
