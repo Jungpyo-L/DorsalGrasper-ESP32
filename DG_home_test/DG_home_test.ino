@@ -26,6 +26,7 @@
 #define E2 4       // Encoder pin2
 #define SCL 22      // i2c scl pin
 #define SDA 21      // i2c sda pin
+#define flexSensorPin  25 // flexible sensor pin
 
 // Define states ----------------------------------------
 #define CALIBRATION 0    // Calibration state
@@ -40,7 +41,6 @@
 #define GRASPING 7      // Grrasping mode, which finger follows wrist
 
 // Create instance --------------------------------------
-ADS ads;                                  // Create instance of the Angular Displacement Sensor (ADS) class
 ESP32Encoder encoder;                     // Create instance of the ESP32 encoder class
 
 // Setup interrupt variables ----------------------------
@@ -93,8 +93,8 @@ const int WRIST_PWM = 250; // motor PWM value for the wrist angle mode
 const int MAX_EN = 1200; // encoder value in fully closed finger
 const int MAX_ANGLE = 45; // maximum angle of the wrist
 const int MIN_ANGLE = 10; // minimum angle of the wrist
-const int ON_ANGLE = 20; // on angle to close the finger
-const int OFF_ANGLE = 10; // off angle to open the inger
+const int ON_ANGLE = 360; // on angle to close the finger
+const int OFF_ANGLE = 320; // off angle to open the inger
 const int HIGH_VELOCITY = 70; // High threshold velocity
 const int LOW_VELOCITY = 65; // Low threshold velocity
 bool calibrate_state;
@@ -110,14 +110,13 @@ int motor_speed = 0;                            // speed of the motor (unit is c
 int motor_speed_prev;                           // to calculate motor acceleration
 int motor_acc;                                  // acceleration of the motor (unit is count)
 bool motor_status = false;                      // motor_status for status change from closing to grasping
-float angle;                                    // wrist angle from ads
+float angle;                                    // wrist angle from spectral flexible sensor
 
 TinyPICO tp = TinyPICO();
 
 void setup()
 {
   Serial.begin(115200);
-  Wire.begin(SDA, SCL); // setup for i2c pins of ESP32, sda= GPIO_23 /scl= GPIO_22
   Serial.println("Start Setup");
  
   pinMode(CALIBRATION_BUTTON, INPUT);
@@ -134,9 +133,6 @@ void setup()
   // initialize sensor
   encoder_init();
   Serial.println("Encoder done");
-
-  ads_init();
-  Serial.println("ads done");
 
   // initialize motor
   Serial.println("Motor PWM Initiation");
@@ -208,14 +204,14 @@ void loop()
       portEXIT_CRITICAL(&timerMux1);
       wrist_MODE();
     }
-    if (digitalRead(CALIBRATION_BUTTON) == HIGH)
-    {
-      // motor_STOP();
-      // timerStop(timer0);
-      // timerStop(timer1);
-      calibrate_state = LOW;
-      state = CALIBRATION;
-    }
+    // if (digitalRead(CALIBRATION_BUTTON) == HIGH)
+    // {
+    //   // motor_STOP();
+    //   // timerStop(timer0);
+    //   // timerStop(timer1);
+    //   calibrate_state = LOW;
+    //   state = CALIBRATION;
+    // }
     if (digitalRead(JOYSTICK_BUTTON) == HIGH)
     {
       state = JOYSTICK_MODE;
@@ -223,13 +219,6 @@ void loop()
       // timerStart(timer0);
       // timerWrite(timer1, 0);
       // timerStart(timer1);
-    }
-    if (incoming == 'i')
-    {
-      motor_STOP();
-      timerStop(timer0);
-      timerStop(timer1);
-      state = INITIALIZATION;
     }
     if (incoming == 'r')
     {
@@ -242,30 +231,22 @@ void loop()
     break;
   }
 
-  case CALIBRATION:
-  {
-    calibrate();
-    if (calibrate_state = HIGH)
-    {
-      state = WRIST_MODE;
-    }
-    // tp.DotStar_SetPower( false ); 
-    break;
-  }
+  // case CALIBRATION:
+  // {
+  //   calibrate();
+  //   if (calibrate_state = HIGH)
+  //   {
+  //     state = WRIST_MODE;
+  //   }
+  //   // tp.DotStar_SetPower( false ); 
+  //   break;
+  // }
 
   case JOYSTICK_MODE:
   {
     byte incoming = Serial.read();
     tp.DotStar_SetPixelColor( 125, 125, 0 );
-    if (timer0_check)
-    {
-      // Serial.println("timer 0");
-      portENTER_CRITICAL(&timerMux0);
-      timer0_check = false;
-      portEXIT_CRITICAL(&timerMux0);
-      get_DATA();
-      print_DATA();
-    }
+
     if (timer1_check)
     {
       // Serial.println("timer 1");
@@ -273,13 +254,6 @@ void loop()
       timer1_check = false;
       portEXIT_CRITICAL(&timerMux1);
       joystick_MODE();
-    }
-    if (incoming == 'i')
-    {
-      motor_STOP();
-      timerStop(timer0);
-      timerStop(timer1);
-      state = INITIALIZATION;
     }
     if (incoming == 'r')
     {
@@ -307,20 +281,6 @@ void encoder_init()
   delay(100);
 }
 
-void ads_init()
-{
-  Serial.println("SparkFun Displacement Sensor Initiation");
-
-  while (ads.begin() == false)
-  {
-    Serial.println(F("No bending sensor detected. Check wiring. Freezing..."));
-    // while (1)
-      // ;
-    delay(150);
-  }
-  delay(150);
-}
-
 // Event checkers --------------------------------------
 
 
@@ -335,32 +295,19 @@ void get_DATA()
    * float temperature; // temperature from ad8405
    * int encoder_count; // position of the motor
    * uint8_t j_L, j_R, pedal; // joystick left, right, and pedal input
-   * float angle; // wrist angle from ads
+   * float angle; // wrist angle from spectral flexible sensor
    */
   // Elapsed time
   elapsed_time = millis();
 
   // Wrist angle
-  if (ads.available())
-  {
-    angle = ads.getX();
-  }
-
-  // t1 = millis();
-  // Distance
-//  distance = vl.readRangeResult(); // We need to use readRangeResult with continuous reading mode (readRange function has while loop inside it)
-  // vl.startRange();
-  // distance = vl.readRange();
+  angle = analogRead(flexSensorPin);
 
   // Encoder count
   encoder_count += count;
   motor_speed = count;
   motor_acc = motor_speed - motor_speed_prev;
   motor_speed_prev = motor_speed;
-
-  // Joystick
-  // j_L = digitalRead(JOYSTICK_BUTTON);
-  // j_R = digitalRead(JOYSTICK_R);
 
 }
 
@@ -377,8 +324,6 @@ void print_DATA()
   Serial.print(", ");
   Serial.print(angle);
   Serial.print(", ");
-  // Serial.print(distance);
-  // Serial.print(", ");
   Serial.print(encoder_count);
   Serial.print(", ");
   Serial.print(motor_speed);
@@ -417,8 +362,7 @@ void calibrate()
   tp.DotStar_SetPixelColor( 0, 255, 0 );
   waitForButtonPress();
 
-  ads.available();
-  ads.calibrateZero();
+
   delay(10);
 
   //Step 2. Set wrist angle to 45
@@ -427,8 +371,6 @@ void calibrate()
   tp.DotStar_SetPixelColor( 0, 0, 255 );
   waitForButtonPress();
 
-  ads.available();
-  ads.calibrateX45();
   delay(10);
 
   Serial.println("Calibration completed.");
