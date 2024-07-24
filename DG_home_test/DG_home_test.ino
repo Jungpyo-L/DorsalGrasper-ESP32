@@ -92,14 +92,18 @@ const int MAX_PWM_VOLTAGE = 200; // too fast
 const int NOM_PWM_VOLTAGE = 150;
 const int JOYSTICK_PWM = 250; // motor PWM value for the joystick mode
 const int WRIST_PWM = 220; // motor PWM value for the wrist angle mode
-const int MAX_EN = 3500; // encoder value in fully closed finger
+const int MAX_EN = 1800; // encoder value in fully closed finger
 const int MAX_ANGLE = 700; // maximum angle of the wrist
-const int MIN_ANGLE = 450; // minimum angle of the wrist
-const int ON_ANGLE = 600; // on angle to close the finger
+const int MIN_ANGLE = 500; // minimum angle of the wrist
+const int ON_ANGLE = 500; // on angle to close the finger
 const int OFF_ANGLE = 450; // off angle to open the inger
 const int HIGH_VELOCITY = 50; // High threshold velocity
 const int LOW_VELOCITY = 30; // Low threshold velocity, grasp force
 bool calibrate_state;
+const int Kp = 2;      // P gain
+const int Ki = 0.1;     // I gain
+const int Kd = 0;       // D gain
+
 
 // Record variables -------------------------------------
 int state = WRIST_MODE;                     // state for the main loop
@@ -204,8 +208,8 @@ void loop()
       portENTER_CRITICAL(&timerMux1);
       timer1_check = false;
       portEXIT_CRITICAL(&timerMux1);
-      wrist_MODE(); // on/off wrist angle control mode
-      //wrist_MODE2(); // continous wrist angle control mode
+      // wrist_MODE(); // on/off wrist angle control mode
+      wrist_MODE2(); // continous wrist angle control mode
     }
     if (digitalRead(CALIBRATION_BUTTON) == HIGH)  //calibration
     {
@@ -447,7 +451,7 @@ void wrist_MODE()
     // if (motor_speed < LOW_VELOCITY && motor_status == true) 
     // if (motor_speed < HIGH_VELOCITY && motor_status == true) 
 
-    if ((motor_speed < LOW_VELOCITY && motor_status == true)|| encoder_count>3500) 
+    if (motor_speed < LOW_VELOCITY && motor_status == true) 
     {
       motor_STOP();
       motor_status = false;
@@ -524,13 +528,11 @@ void wrist_MODE2()
   {
     ledcWrite(pwmChannel_1, duty);
     ledcWrite(pwmChannel_2, LOW);
-    digitalWrite(LED_PIN, HIGH);
   }
   else if (duty < 0)
   {
     ledcWrite(pwmChannel_1, LOW);
     ledcWrite(pwmChannel_2, -duty);
-    digitalWrite(LED_PIN, HIGH);
   }
   else if (duty == 0)
   {
