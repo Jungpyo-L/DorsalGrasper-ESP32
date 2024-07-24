@@ -92,9 +92,9 @@ const int MAX_PWM_VOLTAGE = 200; // too fast
 const int NOM_PWM_VOLTAGE = 150;
 const int JOYSTICK_PWM = 250; // motor PWM value for the joystick mode
 const int WRIST_PWM = 220; // motor PWM value for the wrist angle mode
-const int MAX_EN = 1200; // encoder value in fully closed finger
-const int MAX_ANGLE = 45; // maximum angle of the wrist
-const int MIN_ANGLE = 10; // minimum angle of the wrist
+const int MAX_EN = 3500; // encoder value in fully closed finger
+const int MAX_ANGLE = 700; // maximum angle of the wrist
+const int MIN_ANGLE = 450; // minimum angle of the wrist
 const int ON_ANGLE = 600; // on angle to close the finger
 const int OFF_ANGLE = 450; // off angle to open the inger
 const int HIGH_VELOCITY = 50; // High threshold velocity
@@ -499,4 +499,64 @@ void wrist_MODE()
   default:
     break;
   }
+}
+
+
+void wrist_MODE2()
+{
+  int target_count;
+  if (angle <= MIN_ANGLE)
+  {
+    target_count = 0;
+  }
+  else if (angle > MAX_ANGLE)
+  {
+    target_count = MAX_EN;
+  }
+  else if (angle > MIN_ANGLE && angle <= MAX_ANGLE)
+  {
+    target_count = map(angle, MIN_ANGLE, MAX_ANGLE, 0, MAX_EN);
+  }
+  int duty = wrist_PID(encoder_count, target_count);
+
+  if (duty > 0)
+  {
+    ledcWrite(pwmChannel_1, duty);
+    ledcWrite(pwmChannel_2, LOW);
+    digitalWrite(LED_PIN, HIGH);
+  }
+  else if (duty < 0)
+  {
+    ledcWrite(pwmChannel_1, LOW);
+    ledcWrite(pwmChannel_2, -duty);
+    digitalWrite(LED_PIN, HIGH);
+  }
+  else if (duty == 0)
+  {
+    ledcWrite(pwmChannel_1, LOW);
+    ledcWrite(pwmChannel_2, LOW);
+  }
+}
+
+int wrist_PID(int current, int target)
+{
+  static int LastErr;
+  static float pwm, SumErr;
+
+  int Err = target - current;
+  SumErr += Err;
+  pwm = Kp * Err + Ki * SumErr + Kd * (Err - LastErr);
+  LastErr = Err;
+
+  if (pwm > MAX_PWM_VOLTAGE)
+  {
+    pwm = MAX_PWM_VOLTAGE;
+    SumErr = SumErr - Err; // anti-windup
+  }
+  else if (pwm < -MAX_PWM_VOLTAGE)
+  {
+    pwm = -MAX_PWM_VOLTAGE;
+    SumErr = SumErr - Err; // anti-windup
+  }
+  return (int)pwm;
 }
