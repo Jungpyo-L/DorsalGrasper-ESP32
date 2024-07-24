@@ -204,7 +204,8 @@ void loop()
       portENTER_CRITICAL(&timerMux1);
       timer1_check = false;
       portEXIT_CRITICAL(&timerMux1);
-      wrist_MODE();
+      wrist_MODE(); // on/off wrist angle control mode
+      //wrist_MODE2(); // continous wrist angle control mode
     }
     if (digitalRead(CALIBRATION_BUTTON) == HIGH)  //calibration
     {
