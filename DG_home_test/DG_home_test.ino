@@ -1,3 +1,5 @@
+#include <dummy.h>
+
 
 /*
  * author Jungpyo Lee: <jungpyolee@berkeley.edu> (c.)
@@ -26,7 +28,7 @@
 #define E2 4       // Encoder pin2
 #define SCL 22      // i2c scl pin
 #define SDA 21      // i2c sda pin
-#define flexSensorPin  25 // flexible sensor pin
+#define flexSensorPin  26 // flexible sensor pin
 
 // Define states ----------------------------------------
 #define CALIBRATION 0    // Calibration state
@@ -88,15 +90,15 @@ const int pwmChannel_2 = 2;
 const int resolution = 8; // PWM value from 0 to 255)
 const int MAX_PWM_VOLTAGE = 200; // too fast
 const int NOM_PWM_VOLTAGE = 150;
-const int JOYSTICK_PWM = 230; // motor PWM value for the joystick mode
-const int WRIST_PWM = 250; // motor PWM value for the wrist angle mode
+const int JOYSTICK_PWM = 250; // motor PWM value for the joystick mode
+const int WRIST_PWM = 220; // motor PWM value for the wrist angle mode
 const int MAX_EN = 1200; // encoder value in fully closed finger
 const int MAX_ANGLE = 45; // maximum angle of the wrist
 const int MIN_ANGLE = 10; // minimum angle of the wrist
-const int ON_ANGLE = 360; // on angle to close the finger
-const int OFF_ANGLE = 320; // off angle to open the inger
-const int HIGH_VELOCITY = 70; // High threshold velocity
-const int LOW_VELOCITY = 65; // Low threshold velocity
+const int ON_ANGLE = 600; // on angle to close the finger
+const int OFF_ANGLE = 450; // off angle to open the inger
+const int HIGH_VELOCITY = 50; // High threshold velocity
+const int LOW_VELOCITY = 30; // Low threshold velocity, grasp force
 bool calibrate_state;
 
 // Record variables -------------------------------------
@@ -204,14 +206,14 @@ void loop()
       portEXIT_CRITICAL(&timerMux1);
       wrist_MODE();
     }
-    // if (digitalRead(CALIBRATION_BUTTON) == HIGH)
-    // {
-    //   // motor_STOP();
-    //   // timerStop(timer0);
-    //   // timerStop(timer1);
-    //   calibrate_state = LOW;
-    //   state = CALIBRATION;
-    // }
+    if (digitalRead(CALIBRATION_BUTTON) == HIGH)  //calibration
+    {
+      // motor_STOP();
+      // timerStop(timer0);
+      // timerStop(timer1);
+      calibrate_state = LOW;
+      state = CALIBRATION;
+    }
     if (digitalRead(JOYSTICK_BUTTON) == HIGH)
     {
       state = JOYSTICK_MODE;
@@ -220,10 +222,10 @@ void loop()
       // timerWrite(timer1, 0);
       // timerStart(timer1);
     }
-    if (incoming == 'r')
-    {
-      encoder_count = 0;
-    }
+    // if (incoming == 'r')
+    // {
+    //   encoder_count = 0;
+    // }
 
     // Serial.println('w');
     // delay(100);
@@ -231,16 +233,16 @@ void loop()
     break;
   }
 
-  // case CALIBRATION:
-  // {
-  //   calibrate();
-  //   if (calibrate_state = HIGH)
-  //   {
-  //     state = WRIST_MODE;
-  //   }
-  //   // tp.DotStar_SetPower( false ); 
-  //   break;
-  // }
+  case CALIBRATION:   //calibration
+  {
+    calibrate();
+    if (calibrate_state = HIGH)
+    {
+      state = WRIST_MODE;
+    }
+    // tp.DotStar_SetPower( false ); 
+    break;
+  }
 
   case JOYSTICK_MODE:
   {
@@ -255,10 +257,10 @@ void loop()
       portEXIT_CRITICAL(&timerMux1);
       joystick_MODE();
     }
-    if (incoming == 'r')
-    {
-      encoder_count = 0;
-    }
+    // if (incoming == 'r')
+    // {
+    //   encoder_count = 0;
+    // }
     joystick_MODE();
     //tp.DotStar_SetPower( false );
     //Serial.println('j');
@@ -392,7 +394,7 @@ void waitForButtonPress()
 
 void joystick_MODE()
 {
-  delay(100);
+  delay(10);  //original 100
   if (digitalRead(JOYSTICK_BUTTON) == true && digitalRead(CALIBRATION_BUTTON) == true)
   {
     motor_FORWARD();
@@ -421,36 +423,44 @@ void wrist_MODE()
       motor_FORWARD();
       state2 = CLOSING;
       Serial.println("closing");
-    }
-    else if (angle < OFF_ANGLE && encoder_count > 0)
+    } 
+    // else if (angle < OFF_ANGLE)   
+    else if (angle < OFF_ANGLE && encoder_count >= 0)
     {
       motor_BACKWARD();
       state2 = OPENING;
       Serial.println("opening");
+      // motor_STOP();
     }
     break;
   }
   case CLOSING:
   {
     tp.DotStar_SetPixelColor( 0, 255, 0 );
-    if (motor_speed >= HIGH_VELOCITY)
+    // if (motor_speed >= HIGH_VELOCITY)
+    if (motor_speed >= LOW_VELOCITY)
     {
       motor_status = true;
     }
 
-    if (motor_speed < LOW_VELOCITY && motor_status == true) 
+    // if (motor_speed < LOW_VELOCITY && motor_status == true) 
+    // if (motor_speed < HIGH_VELOCITY && motor_status == true) 
+
+    if ((motor_speed < LOW_VELOCITY && motor_status == true)|| encoder_count>3500) 
     {
       motor_STOP();
       motor_status = false;
       state2 = GRASPING;
       Serial.println("grasping");
     }
+    // else if (angle < ON_ANGLE)
     else if (angle < OFF_ANGLE)
     {
       motor_BACKWARD();
       motor_status = false;
       state2 = OPENING;
       Serial.println("opening");
+      // motor_STOP();
     }
     // tp.DotStar_SetPixelColor( 255, 0, 0);
     break;
@@ -458,7 +468,7 @@ void wrist_MODE()
   case OPENING:
   {
     tp.DotStar_SetPixelColor( 0, 0, 255 );
-    if (encoder_count <= 0)
+    if (encoder_count <= 0)     //encoder
     {
       motor_STOP();
       state2 = IDLE;
@@ -475,7 +485,8 @@ void wrist_MODE()
   }
   case GRASPING:
   {
-    if (angle < OFF_ANGLE)
+    if (angle < ON_ANGLE)
+    // if (angle < OFF_ANGLE)
     {
       motor_BACKWARD();
       state2 = OPENING;
