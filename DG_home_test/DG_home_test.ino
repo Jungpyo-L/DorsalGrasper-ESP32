@@ -92,11 +92,11 @@ const int MAX_PWM_VOLTAGE = 200; // too fast
 const int NOM_PWM_VOLTAGE = 150;
 const int JOYSTICK_PWM = 250; // motor PWM value for the joystick mode
 const int WRIST_PWM = 220; // motor PWM value for the wrist angle mode
-const int MAX_EN = 1800; // encoder value in fully closed finger
-const int MAX_ANGLE = 700; // maximum angle of the wrist
-const int MIN_ANGLE = 500; // minimum angle of the wrist
-const int ON_ANGLE = 500; // on angle to close the finger
-const int OFF_ANGLE = 450; // off angle to open the inger
+const int MAX_EN = 1350; // encoder value in fully closed finger
+const int MAX_ANGLE = 900; // maximum angle of the wrist
+const int MIN_ANGLE = 450; // minimum angle of the wrist
+const int ON_ANGLE = 550; // on angle to close the finger
+const int OFF_ANGLE = 400; // off angle to open the inger
 const int HIGH_VELOCITY = 50; // High threshold velocity
 const int LOW_VELOCITY = 30; // Low threshold velocity, grasp force
 bool calibrate_state;
@@ -327,15 +327,15 @@ void print_DATA()
   {
     Serial.print("j, ");
   }
-  Serial.print(elapsed_time);
-  Serial.print(", ");
-  Serial.print(angle);
-  Serial.print(", ");
-  Serial.print(encoder_count);
-  Serial.print(", ");
-  Serial.print(motor_speed);
-  Serial.print(", ");
-  Serial.println(motor_acc);
+  // Serial.print(elapsed_time);
+  // Serial.print(", ");
+  // Serial.print(angle);
+  // Serial.print(", ");
+  // Serial.print(encoder_count);
+  // Serial.print(", ");
+  // Serial.print(motor_speed);
+  // Serial.print(", ");
+  // Serial.println(motor_acc);
 }
 
 // General functions -----------------------------------
@@ -490,7 +490,7 @@ void wrist_MODE()
   }
   case GRASPING:
   {
-    if (angle < ON_ANGLE)
+    if (angle < ON_ANGLE && angle > OFF_ANGLE)
     // if (angle < OFF_ANGLE)
     {
       motor_BACKWARD();
