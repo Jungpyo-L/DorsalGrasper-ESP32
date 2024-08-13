@@ -30,6 +30,8 @@
 #define SDA 21      // i2c sda pin
 #define flexSensorPin  26 // flexible sensor pin
 
+#define SWITCH_BUTTON 25    //new switch
+
 // Define states ----------------------------------------
 #define CALIBRATION 0    // Calibration state
 #define INITIALIZATION 1 // Initialization state
@@ -95,8 +97,8 @@ const int WRIST_PWM = 220; // motor PWM value for the wrist angle mode
 const int MAX_EN = 1350; // encoder value in fully closed finger
 const int MAX_ANGLE = 900; // maximum angle of the wrist
 const int MIN_ANGLE = 450; // minimum angle of the wrist
-const int ON_ANGLE = 550; // on angle to close the finger
-const int OFF_ANGLE = 400; // off angle to open the inger
+const int ON_ANGLE = 650; // on angle to close the finger
+const int OFF_ANGLE = 500; // off angle to open the inger
 const int HIGH_VELOCITY = 50; // High threshold velocity
 const int LOW_VELOCITY = 30; // Low threshold velocity, grasp force
 bool calibrate_state;
@@ -127,6 +129,12 @@ void setup()
  
   pinMode(CALIBRATION_BUTTON, INPUT);
   pinMode(JOYSTICK_BUTTON, INPUT);
+  // pinMode(CALIBRATION_BUTTON, INPUT_PULLUP);
+  // pinMode(JOYSTICK_BUTTON, INPUT_PULLUP);
+  
+  // attachInterrupt(digitalPinToInterrupt(CALIBRATION_BUTTON), isrCalibration, FALLING);
+  // attachInterrupt(digitalPinToInterrupt(JOYSTICK_BUTTON), isrJoystick, FALLING);
+  pinMode(SWITCH_BUTTON, INPUT);    //new switch
   tp.DotStar_SetPower( true );
   tp.DotStar_SetBrightness( 10 );
   tp.DotStar_CycleColor(25);
@@ -138,7 +146,7 @@ void setup()
 
   // initialize sensor
   encoder_init();
-  Serial.println("Encoder done");
+  // Serial.println("Encoder done");
 
   // initialize motor
   Serial.println("Motor PWM Initiation");
@@ -153,14 +161,14 @@ void setup()
   delay(100);
 
   // initialize timer; timer0 = data acquisition, timer1 = motor operation
-  Serial.println("Timer0 initializatoin");
+  // Serial.println("Timer0 initializatoin");
   timer0 = timerBegin(0, 80, true);             // timer 0, MWDT clock period = 12.5 ns * TIMGn_Tx_WDT_CLK_PRESCALE -> 12.5 ns * 80 -> 1000 ns = 1 us, countUp
   timerAttachInterrupt(timer0, &onTime0, true); // edge (not level) triggered
   timerAlarmWrite(timer0, 50000, true);        // 50000 * 1 us = 50 ms, autoreload true (20 Hz)
   timerAlarmEnable(timer0);                     // enable timer0
   timerStop(timer0);
 
-  Serial.println("Timer1 initializatoin");
+  // Serial.println("Timer1 initializatoin");
   timer1 = timerBegin(1, 80, true);             // timer 0, MWDT clock period = 12.5 ns * TIMGn_Tx_WDT_CLK_PRESCALE -> 12.5 ns * 80 -> 1000 ns = 1 us, countUp
   timerAttachInterrupt(timer1, &onTime1, true); // edge (not level) triggered
   timerAlarmWrite(timer1, 50000, true);        // 50000 * 1 us = 50 ms, autoreload true (20 Hz)
@@ -186,57 +194,112 @@ void setup()
   // delay(1000);
 } 
 
-void loop()
-{
-  switch (state)
-  {
-  case WRIST_MODE:
-  {
-    byte incoming = Serial.read();
-    if (timer0_check)
-    {
-      // Serial.println("timer 0");
-      portENTER_CRITICAL(&timerMux0);
-      timer0_check = false;
-      portEXIT_CRITICAL(&timerMux0);
-      get_DATA();
-      print_DATA();
-    }
-    if (timer1_check)
-    {
-      // Serial.println("timer 1");
-      portENTER_CRITICAL(&timerMux1);
-      timer1_check = false;
-      portEXIT_CRITICAL(&timerMux1);
-      // wrist_MODE(); // on/off wrist angle control mode
-      wrist_MODE2(); // continous wrist angle control mode
-    }
-    if (digitalRead(CALIBRATION_BUTTON) == HIGH)  //calibration
-    {
-      // motor_STOP();
-      // timerStop(timer0);
-      // timerStop(timer1);
-      calibrate_state = LOW;
-      state = CALIBRATION;
-    }
-    if (digitalRead(JOYSTICK_BUTTON) == HIGH)
-    {
-      state = JOYSTICK_MODE;
-      // timerWrite(timer0, 0);
-      // timerStart(timer0);
-      // timerWrite(timer1, 0);
-      // timerStart(timer1);
-    }
-    // if (incoming == 'r')
-    // {
-    //   encoder_count = 0;
-    // }
+// void loop()
+// {
+//   switch (state)
+//   {
+//   case WRIST_MODE:
+//   {
+//     byte incoming = Serial.read();
+//     if (timer0_check)
+//     {
+//       // Serial.println("timer 0");
+//       portENTER_CRITICAL(&timerMux0);
+//       timer0_check = false;
+//       portEXIT_CRITICAL(&timerMux0);
+//       get_DATA();
+//       print_DATA();
+//     }
+//     if (timer1_check)
+//     {
+//       // Serial.println("timer 1");
+//       portENTER_CRITICAL(&timerMux1);
+//       timer1_check = false;
+//       portEXIT_CRITICAL(&timerMux1);
+//       // wrist_MODE(); // on/off wrist angle control mode
+//       wrist_MODE2(); // continous wrist angle control mode
+//     }
+//     if (digitalRead(CALIBRATION_BUTTON) == HIGH)  //calibration
+//     {
+//       // motor_STOP();
+//       // timerStop(timer0);
+//       // timerStop(timer1);
+//       calibrate_state = LOW;
+//       // state = CALIBRATION;
+//       state = JOYSTICK_MODE;
+//     }
+//     if (digitalRead(JOYSTICK_BUTTON) == HIGH)
+//     {
+//       state = JOYSTICK_MODE;
+//       // timerWrite(timer0, 0);
+//       // timerStart(timer0);
+//       // timerWrite(timer1, 0);
+//       // timerStart(timer1);
+//     }
+//     // if (incoming == 'r')
+//     // {
+//     //   encoder_count = 0;
+//     // }
 
-    // Serial.println('w');
-    // delay(100);
-    // tp.DotStar_SetPixelColor( 255, 128, 0);
-    break;
+//     // Serial.println('w');
+//     // delay(100);
+//     // tp.DotStar_SetPixelColor( 255, 128, 0);
+//     break;
+//   }
+
+void loop() {
+  static bool using_wrist_mode2 = true; // Variable to track the current mode
+  
+  // Check if the mode switch button is pressed
+  if (digitalRead(SWITCH_BUTTON) == HIGH) {
+    using_wrist_mode2 = !using_wrist_mode2; // Toggle between wrist_mode and wrist_mode2
+    delay(100); // Debounce delay
   }
+  if (using_wrist_mode2) {
+            wrist_MODE2(); // Continuous wrist angle control mode
+          } else {
+            wrist_MODE(); // On/Off wrist angle control mode
+          }
+
+  switch (state) {
+    case WRIST_MODE:
+      {
+        byte incoming = Serial.read();
+        if (timer0_check) {
+          portENTER_CRITICAL(&timerMux0);
+          timer0_check = false;
+          portEXIT_CRITICAL(&timerMux0);
+          get_DATA();
+          print_DATA();
+        }
+        if (timer1_check) {
+          portENTER_CRITICAL(&timerMux1);
+          timer1_check = false;
+          portEXIT_CRITICAL(&timerMux1);
+          if (using_wrist_mode2) {
+            wrist_MODE2(); // Continuous wrist angle control mode
+          } else {
+            wrist_MODE(); // On/Off wrist angle control mode
+          }
+          
+        }
+        if (digitalRead(CALIBRATION_BUTTON) == HIGH) {
+          calibrate_state = LOW;
+          state = JOYSTICK_MODE;
+          delay(50);
+        }
+        if (digitalRead(JOYSTICK_BUTTON) == HIGH) {
+          state = JOYSTICK_MODE;
+          delay(50);
+        }
+        break;
+      }
+
+    // Existing cases for CALIBRATION and JOYSTICK_MODE...
+
+//   }
+// }
+
 
   case CALIBRATION:   //calibration
   {
@@ -275,10 +338,11 @@ void loop()
   }
 }
 
+
 // Setup functions --------------------------------------
 void encoder_init()
 {
-  Serial.println("Motor encoder Initiation");
+  // Serial.println("Motor encoder Initiation");
 
   ESP32Encoder::useInternalWeakPullResistors = puType::up; // Enable the weak pull up resistors
   encoder.attachHalfQuad(E2, E1);                 // Attache pins for use as encoder pins
@@ -322,7 +386,7 @@ void print_DATA()
 {
   if (state == WRIST_MODE)
   {
-    Serial.print("w, ");
+    // Serial.print("w, ");
   } else if (state == JOYSTICK_MODE)
   {
     Serial.print("j, ");
@@ -359,7 +423,13 @@ void motor_BACKWARD()
   ledcWrite(pwmChannel_2, JOYSTICK_PWM);
   //digitalWrite(LED_PIN, HIGH);
 }
+// void isrCalibration() {
+//   state = CALIBRATION;
+// }
 
+// void isrJoystick() {
+//   state = JOYSTICK_MODE;
+// }
 void calibrate()
 {
 
@@ -400,7 +470,7 @@ void waitForButtonPress()
 void joystick_MODE()
 {
   delay(10);  //original 100
-  if (digitalRead(JOYSTICK_BUTTON) == true && digitalRead(CALIBRATION_BUTTON) == true)
+  if (digitalRead(CALIBRATION_BUTTON) == true)
   {
     motor_FORWARD();
   }
