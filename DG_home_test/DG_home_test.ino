@@ -253,7 +253,7 @@ void loop() {
   // Check if the mode switch button is pressed
   if (digitalRead(SWITCH_BUTTON) == HIGH) {
     using_wrist_mode2 = !using_wrist_mode2; // Toggle between wrist_mode and wrist_mode2
-    delay(100); // Debounce delay
+    delay(200); // Debounce delay
   }
   if (using_wrist_mode2) {
             wrist_MODE2(); // Continuous wrist angle control mode
@@ -284,7 +284,7 @@ void loop() {
           
         }
         if (digitalRead(CALIBRATION_BUTTON) == HIGH) {
-          calibrate_state = LOW;
+          // calibrate_state = LOW;
           state = JOYSTICK_MODE;
           delay(50);
         }
