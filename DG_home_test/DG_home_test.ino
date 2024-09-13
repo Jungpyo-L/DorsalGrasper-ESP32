@@ -94,11 +94,11 @@ const int MAX_PWM_VOLTAGE = 200; // too fast
 const int NOM_PWM_VOLTAGE = 150;
 const int JOYSTICK_PWM = 250; // motor PWM value for the joystick mode
 const int WRIST_PWM = 220; // motor PWM value for the wrist angle mode
-const int MAX_EN = 1350; // encoder value in fully closed finger
-const int MAX_ANGLE = 900; // maximum angle of the wrist
-const int MIN_ANGLE = 450; // minimum angle of the wrist
-const int ON_ANGLE = 650; // on angle to close the finger
-const int OFF_ANGLE = 500; // off angle to open the inger
+const int MAX_EN = 1250; // encoder value in fully closed finger
+const int MAX_ANGLE = 900; // maximum angle of the wrist, 900
+const int MIN_ANGLE = 450; // minimum angle of the wrist, 450
+const int ON_ANGLE = 50; // on angle to close the finger
+const int OFF_ANGLE =30; // off angle to open the inger
 const int HIGH_VELOCITY = 50; // High threshold velocity
 const int LOW_VELOCITY = 30; // Low threshold velocity, grasp force
 bool calibrate_state;
@@ -257,8 +257,10 @@ void loop() {
   }
   if (using_wrist_mode2) {
             wrist_MODE2(); // Continuous wrist angle control mode
+            tp.DotStar_SetPixelColor( 125,125, 0 );
           } else {
             wrist_MODE(); // On/Off wrist angle control mode
+            tp.DotStar_SetPixelColor( 125,125, 0 );
           }
 
   switch (state) {
@@ -284,7 +286,7 @@ void loop() {
           
         }
         if (digitalRead(CALIBRATION_BUTTON) == HIGH) {
-          // calibrate_state = LOW;
+          calibrate_state = LOW;
           state = JOYSTICK_MODE;
           delay(50);
         }
@@ -384,13 +386,13 @@ void get_DATA()
 
 void print_DATA()
 {
-  if (state == WRIST_MODE)
-  {
-    // Serial.print("w, ");
-  } else if (state == JOYSTICK_MODE)
-  {
-    Serial.print("j, ");
-  }
+  // if (state == WRIST_MODE)
+  // {
+  //   // Serial.print("w, ");
+  // } else if (state == JOYSTICK_MODE)
+  // {
+  //   Serial.print("j, ");
+  // }
   // Serial.print(elapsed_time);
   // Serial.print(", ");
   // Serial.print(angle);
@@ -469,14 +471,18 @@ void waitForButtonPress()
 
 void joystick_MODE()
 {
-  delay(10);  //original 100
+  // delay(100);  //original 100
   if (digitalRead(CALIBRATION_BUTTON) == true)
   {
     motor_FORWARD();
+    delay(5);
+    // tp.DotStar_SetPixelColor( 255, 0, 0 );
   }
   else if (digitalRead(JOYSTICK_BUTTON) == true)
   {
     motor_BACKWARD();
+    delay(5);
+    // tp.DotStar_SetPixelColor( 0, 255, 0 );
   }
   else
   {
@@ -494,6 +500,7 @@ void wrist_MODE()
     tp.DotStar_SetPixelColor( 255, 0, 0 );
     motor_STOP();
     if (angle >= ON_ANGLE)
+    // if (angle <= ON_ANGLE && encoder_count <=900)
     {
       motor_FORWARD();
       state2 = CLOSING;
@@ -512,8 +519,8 @@ void wrist_MODE()
   case CLOSING:
   {
     tp.DotStar_SetPixelColor( 0, 255, 0 );
-    // if (motor_speed >= HIGH_VELOCITY)
-    if (motor_speed >= LOW_VELOCITY)
+    if (motor_speed >= HIGH_VELOCITY)
+    // if (motor_speed >= LOW_VELOCITY)
     {
       motor_status = true;
     }
@@ -521,7 +528,8 @@ void wrist_MODE()
     // if (motor_speed < LOW_VELOCITY && motor_status == true) 
     // if (motor_speed < HIGH_VELOCITY && motor_status == true) 
 
-    if (motor_speed < LOW_VELOCITY && motor_status == true) 
+    // if (motor_speed < LOW_VELOCITY && motor_status == true)
+    if (encoder_count>=1900 && motor_status == true)  
     {
       motor_STOP();
       motor_status = false;
@@ -560,8 +568,8 @@ void wrist_MODE()
   }
   case GRASPING:
   {
-    if (angle < ON_ANGLE && angle > OFF_ANGLE)
-    // if (angle < OFF_ANGLE)
+    // if (angle < ON_ANGLE && angle > OFF_ANGLE)
+    if (angle < OFF_ANGLE)
     {
       motor_BACKWARD();
       state2 = OPENING;
