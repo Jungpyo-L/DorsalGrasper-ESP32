@@ -4,7 +4,7 @@
 /*
  * author Jungpyo Lee: <jungpyolee@berkeley.edu> (c.)
  * creation date : May. 22. 2024
- * last update : May. 22. 2024
+ * last update : sep. 23. 2024
  * source: MENG_final_code_tinypico
  * version 1.0
  * changed: trim the code for the home test device (wrist angle control mode only)
@@ -95,10 +95,10 @@ const int NOM_PWM_VOLTAGE = 150;
 const int JOYSTICK_PWM = 250; // motor PWM value for the joystick mode
 const int WRIST_PWM = 220; // motor PWM value for the wrist angle mode
 const int MAX_EN = 1600; // encoder value in fully closed finger
-const int MAX_ANGLE = 900; // maximum angle of the wrist, 900
-const int MIN_ANGLE = 450; // minimum angle of the wrist, 450
-const int ON_ANGLE = 550; // on angle to close the finger
-const int OFF_ANGLE =450; // off angle to open the inger
+const int MAX_ANGLE = 1000; // maximum angle of the wrist, 900
+const int MIN_ANGLE = 550; // minimum angle of the wrist, 450
+const int ON_ANGLE =825; // on angle to close the finger
+const int OFF_ANGLE =680; // off angle to open the inger
 const int HIGH_VELOCITY = 50; // High threshold velocity
 const int LOW_VELOCITY = 30; // Low threshold velocity, grasp force
 bool calibrate_state;
@@ -252,8 +252,9 @@ void loop() {
   
   // Check if the mode switch button is pressed
   if (digitalRead(SWITCH_BUTTON) == HIGH) {
-    using_wrist_mode2 = !using_wrist_mode2; // Toggle between wrist_mode and wrist_mode2
-    delay(200); // Debounce delay
+    using_wrist_mode2 = !using_wrist_mode2;
+    Serial.print("mode switch\n"); // Toggle between wrist_mode and wrist_mode2
+    delay(1000); // Debounce delay
   }
   if (using_wrist_mode2) {
             wrist_MODE2(); // Continuous wrist angle control mode
@@ -388,17 +389,19 @@ void print_DATA()
 {
   // if (state == WRIST_MODE)
   // {
-  //   // Serial.print("w, ");
+  //   Serial.print("forward, ");
   // } else if (state == JOYSTICK_MODE)
   // {
-  //   Serial.print("j, ");
+  //   Serial.print("backward, ");
+  // } else if (state == SWITCH_MODE){
+  //   Serial.print("mode switch, ")
   // }
-  // Serial.print(elapsed_time);
-  // Serial.print(", ");
-  // Serial.print(angle);
-  // Serial.print(", ");
-  // Serial.print(encoder_count);
-  // Serial.print(", ");
+  Serial.print(elapsed_time);
+  Serial.print(", ");
+  Serial.print(angle);
+  Serial.print("\n, ");
+  Serial.print(encoder_count);
+  Serial.print(", ");
   // Serial.print(motor_speed);
   // Serial.print(", ");
   // Serial.println(motor_acc);
@@ -560,8 +563,8 @@ void wrist_MODE()
     // if (motor_speed < LOW_VELOCITY && motor_status == true) 
     // if (motor_speed < HIGH_VELOCITY && motor_status == true) 
 
-    // if (motor_speed < LOW_VELOCITY && motor_status == true)
-    if (encoder_count>=1500 && motor_status == true)  
+    if (motor_speed < LOW_VELOCITY && motor_status == true)
+    // if (encoder_count>=1500 && motor_status == true)  
     {
       motor_STOP();
       motor_status = false;
