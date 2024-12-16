@@ -1,16 +1,3 @@
-/*
-    ESP-NOW Broadcast Master
-    Lucas Saavedra Vaz - 2024
-
-    This sketch demonstrates how to broadcast messages to all devices within the ESP-NOW network.
-    This example is intended to be used with the ESP-NOW Broadcast Slave example.
-
-    The master device will broadcast a message every 5 seconds to all devices within the network.
-    This will be done using by registering a peer object with the broadcast address.
-
-    The slave devices will receive the broadcasted messages and print them to the Serial Monitor.
-*/
-
 #include "ESP32_NOW.h"
 #include "WiFi.h"
 
@@ -18,7 +5,7 @@
 
 /* Definitions */
 
-#define ESPNOW_WIFI_CHANNEL 6
+#define ESPNOW_WIFI_CHANNEL 8
 
 
 #define BUTTONa 12    // Green button
@@ -26,6 +13,7 @@
 #define BUTTONc 33    // Red button
 #define LED 13
 /* Classes */
+char data[32];
 
 // Creating a new class that inherits from the ESP_NOW_Peer class is required.
 
@@ -102,7 +90,6 @@ void setup() {
 
 void loop() {
   // Broadcast a message to all devices within the network
-  char data[32];
   Serial.printf("Broadcasting message: %s\n", data);
   if (digitalRead(BUTTONa) == HIGH) {
     snprintf(data, sizeof(data), "green");
@@ -132,5 +119,5 @@ void loop() {
     Serial.println("Failed to broadcast message");
   }
 
-  delay(10);
+  delay(100);
 }
