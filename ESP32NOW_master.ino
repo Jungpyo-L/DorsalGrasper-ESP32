@@ -119,5 +119,5 @@ void loop() {
     Serial.println("Failed to broadcast message");
   }
 
-  delay(100);
+  delay(10);
 }
