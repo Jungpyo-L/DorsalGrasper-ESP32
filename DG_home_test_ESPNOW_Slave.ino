@@ -1,17 +1,5 @@
 #include <dummy.h>
-
-
-/*
- * author Jungpyo Lee: <jungpyolee@berkeley.edu> (c.)
- * creation date : May. 22. 2024
- * last update : sep. 23. 2024
- * source: MENG_final_code_tinypico
- * version 1.0
- * changed: trim the code for the home test device (wrist angle control mode only)
- * project : Home based evaluation of the Dorsal Grasper
- * motivation : MEng project (tutorial device)
- */
-
+//DG_home_test with ESPNOW for tinypico
 // Include headers --------------------------------------
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
