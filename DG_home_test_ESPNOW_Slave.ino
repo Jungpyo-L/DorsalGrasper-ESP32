@@ -1,5 +1,17 @@
 #include <dummy.h>
-//DG_home_test with ESPNOW for tinypico
+
+
+/*
+ * author Jungpyo Lee: <jungpyolee@berkeley.edu> (c.)
+ * creation date : May. 22. 2024
+ * last update : sep. 23. 2024
+ * source: MENG_final_code_tinypico
+ * version 1.0
+ * changed: trim the code for the home test device (wrist angle control mode only)
+ * project : Home based evaluation of the Dorsal Grasper
+ * motivation : MEng project (tutorial device)
+ */
+
 // Include headers --------------------------------------
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
@@ -30,6 +42,7 @@ char macStr[18] = "0c:8b:95:96:5c:44";
 #define INITIALIZATION 1 // Initialization state
 #define JOYSTICK_MODE 2  // Joystick control mode
 #define WRIST_MODE 3     // Wrist angle control mode
+#define ESPNOW_MODE 9
 
 // Define states for the wrist angle mode ---------------
 #define IDLE 4          // Idle state (PWM = 0)
@@ -94,16 +107,26 @@ void configDeviceAP() {
 }
 
 
+// void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+//   char macStr[18] = "0c:8b:95:96:5c:44";
+//   snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
+//            mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+//   Serial.print("Data: "); 
+//   Serial.println(reinterpret_cast<const char*>(data));
+//   Serial.println("");
+// }
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
-  char macStr[18] = "0c:8b:95:96:5c:44";
-  // snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-  //          mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-  Serial.print("Data: "); 
-  Serial.println(reinterpret_cast<const char*>(data));
-
-
-  Serial.println("");
+    char macStr[18];
+    snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
+             mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+    Serial.print("Received from MAC: "); 
+    Serial.println(macStr);
+    Serial.print("Data: ");
+    Serial.write(data, data_len); // Make sure the data is displayed correctly
+    Serial.println();
+    Serial.pritnln(receivedData);
 }
+
 // Setup interrupt functions ----------------------------
 void IRAM_ATTR onTime0()
 { // this can be used for constant data acquisition
@@ -166,6 +189,9 @@ int motor_acc;                                  // acceleration of the motor (un
 bool motor_status = false;                      // motor_status for status change from closing to grasping
 float angle;                                    // wrist angle from spectral flexible sensor
 
+const char* receivedData = reinterpret_cast<const char*>(data);
+
+
 TinyPICO tp = TinyPICO();
 
 void setup()
@@ -185,6 +211,8 @@ void setup()
   // Once ESPNow is successfully Init, we will register for recv CB to
   // get recv packer info.
   esp_now_register_recv_cb(OnDataRecv);
+  Serial.println(receivedData);
+  
   pinMode(CALIBRATION_BUTTON, INPUT);
   pinMode(JOYSTICK_BUTTON, INPUT);
   // pinMode(CALIBRATION_BUTTON, INPUT_PULLUP);
@@ -193,6 +221,7 @@ void setup()
   // attachInterrupt(digitalPinToInterrupt(CALIBRATION_BUTTON), isrCalibration, FALLING);
   // attachInterrupt(digitalPinToInterrupt(JOYSTICK_BUTTON), isrJoystick, FALLING);
   pinMode(SWITCH_BUTTON, INPUT);    //new switch
+  
   tp.DotStar_SetPower( true );
   tp.DotStar_SetBrightness( 10 );
   tp.DotStar_CycleColor(25);
@@ -261,9 +290,9 @@ void loop() {
   
   // Check if the mode switch button is pressed
   // Assuming data is properly null-terminated and safe to use as a string
-const char* receivedData = reinterpret_cast<const char*>(data);
-if (digitalRead(SWITCH_BUTTON) == HIGH || strcmp(receivedData, "green") == 0) {
-    Serial.println("ESPNOW read green");
+// const char* receivedData = reinterpret_cast<const char*>(data);
+if (digitalRead(SWITCH_BUTTON) == HIGH || receivedData == "green") {
+    // Serial.println("ESPNOW read green");
     using_wrist_mode2 = !using_wrist_mode2;
     Serial.println("Mode switch"); // Toggle between wrist_mode and wrist_mode2
     delay(100); // Debounce delay (consider a non-blocking alternative)
@@ -299,21 +328,33 @@ if (digitalRead(SWITCH_BUTTON) == HIGH || strcmp(receivedData, "green") == 0) {
           }
           
         }
-        if (digitalRead(CALIBRATION_BUTTON) == HIGH || strcmp(receivedData, "red") == 0) {
+        if (digitalRead(CALIBRATION_BUTTON) == HIGH) {
           // if (reinterpret_cast<const char*>(data) == "red"){
           //     Serial.print("ESPNOW read red\n");
           //   }
-          Serial.print("ESPNOW read red\n");
+          Serial.print("button read red\n");
           // calibrate_state = LOW;
           state = JOYSTICK_MODE;
           delay(50);
         }
-        if (digitalRead(JOYSTICK_BUTTON) == HIGH || strcmp(receivedData, "white") == 0) {
+         if ( receivedData == "red"){
+          Serial.print("ESPNOW read red\n");
+          // calibrate_state = LOW;
+          state = ESPNOW_MODE;
+          delay(50);
+        }
+        if (digitalRead(JOYSTICK_BUTTON) == HIGH) {
           // if (reinterpret_cast<const char*>(data) == "white"){
           //     Serial.print("ESPNOW read white\n");
           //   }
-          Serial.print("ESPNOW read white\n");
+          Serial.print("button read white\n");
+          
           state = JOYSTICK_MODE;
+          delay(50);
+        } 
+        if ( receivedData == "white"){
+          Serial.print("ESPNOW read white\n");
+          state = ESPNOW_MODE;
           delay(50);
         }
         break;
@@ -356,6 +397,19 @@ if (digitalRead(SWITCH_BUTTON) == HIGH || strcmp(receivedData, "green") == 0) {
     joystick_MODE();
     //tp.DotStar_SetPower( false );
     //Serial.println('j');
+    break;
+  }
+  case ESPNOW_MODE:
+  {
+     if (timer1_check)
+    {
+      // Serial.println("timer 1");
+      portENTER_CRITICAL(&timerMux1);
+      timer1_check = false;
+      portEXIT_CRITICAL(&timerMux1);
+      espnow_MODE();
+    }
+    espnow_MODE();
     break;
   }
 
@@ -419,11 +473,11 @@ void print_DATA()
   // }
   // Serial.print(elapsed_time);
   // Serial.print(", ");
-  // Serial.print(angle);
-  // Serial.print("\n, ");
-  // Serial.print(encoder_count);
-  // Serial.print(", ");
-  // Serial.print(motor_speed);
+  Serial.print(angle);
+  Serial.print("\n, ");
+  Serial.print(encoder_count);
+  Serial.print(", ");
+  Serial.print(motor_speed);
   // Serial.print(", ");
   // Serial.println(motor_acc);
 }
@@ -504,6 +558,24 @@ void joystick_MODE()
     // tp.DotStar_SetPixelColor( 255, 0, 0 );
   }
   else if (digitalRead(JOYSTICK_BUTTON) == true)
+  {
+    motor_BACKWARD();
+    delay(80);
+    // tp.DotStar_SetPixelColor( 0, 255, 0 );
+  }
+  else
+  {
+    motor_STOP();
+  }
+}
+void espnow_MODE(){
+  if ( receivedData == "white")
+  {
+    motor_FORWARD();
+    delay(80);
+    // tp.DotStar_SetPixelColor( 255, 0, 0 );
+  }
+  else if ( receivedData == "red")
   {
     motor_BACKWARD();
     delay(80);
