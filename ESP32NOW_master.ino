@@ -7,7 +7,6 @@
 
 #define ESPNOW_WIFI_CHANNEL 8
 
-
 #define BUTTONa 12    // Green button
 #define BUTTONb 15    // White button
 #define BUTTONc 33    // Red button
@@ -48,8 +47,6 @@ public:
 
 /* Global Variables */
 
-uint32_t msg_count = 0;
-
 // Create a broadcast peer object
 ESP_NOW_Broadcast_Peer broadcast_peer(ESPNOW_WIFI_CHANNEL, WIFI_IF_STA, NULL);
 
@@ -58,7 +55,7 @@ ESP_NOW_Broadcast_Peer broadcast_peer(ESPNOW_WIFI_CHANNEL, WIFI_IF_STA, NULL);
 void setup() {
   Serial.begin(115200);
   while (!Serial) {
-    delay(10);
+    delay(100);
   }
   pinMode(BUTTONa, INPUT);
   pinMode(BUTTONb, INPUT);
@@ -80,44 +77,45 @@ void setup() {
   // Register the broadcast peer
   if (!broadcast_peer.begin()) {
     Serial.println("Failed to initialize broadcast peer");
-    Serial.println("Reebooting in 5 second...");
+    Serial.println("Rebooting in 5 seconds...");
     delay(5000);
     ESP.restart();
   }
 
-  Serial.println("Setup complete. Broadcasting messages every seconds.");
+  Serial.println("Setup complete. Waiting for button presses.");
 }
 
 void loop() {
-  // Broadcast a message to all devices within the network
-  Serial.printf("Broadcasting message: %s\n", data);
+  // Check button states and send messages accordingly
   if (digitalRead(BUTTONa) == HIGH) {
     snprintf(data, sizeof(data), "green");
-    digitalWrite(LED, HIGH);  // turn the LED on (HIGH is the voltage level)
-    delay(1000);
+    digitalWrite(LED, HIGH);  // Turn the LED on
+    if (!broadcast_peer.send_message((uint8_t *)data, sizeof(data))) {
+      Serial.println("Failed to broadcast green message");
+    }
+    delay(1000); // Debounce delay
     digitalWrite(LED, LOW);
   }
+
   if (digitalRead(BUTTONb) == HIGH) {
-      //send to tinypico
-      snprintf(data, sizeof(data), "white");
-      digitalWrite(LED, HIGH);  // turn the LED on (HIGH is the voltage level)
-      delay(1000);
-      digitalWrite(LED, LOW);
-  } 
+    snprintf(data, sizeof(data), "white");
+    digitalWrite(LED, HIGH);  // Turn the LED on
+    if (!broadcast_peer.send_message((uint8_t *)data, sizeof(data))) {
+      Serial.println("Failed to broadcast white message");
+    }
+    delay(1000); // Debounce delay
+    digitalWrite(LED, LOW);
+  }
+
   if (digitalRead(BUTTONc) == HIGH) {
-      snprintf(data, sizeof(data), "red");
-      digitalWrite(LED, HIGH);  // turn the LED on (HIGH is the voltage level)
-      delay(1000);
-      digitalWrite(LED, LOW);
+    snprintf(data, sizeof(data), "red");
+    digitalWrite(LED, HIGH);  // Turn the LED on
+    if (!broadcast_peer.send_message((uint8_t *)data, sizeof(data))) {
+      Serial.println("Failed to broadcast red message");
+    }
+    delay(1000); // Debounce delay
+    digitalWrite(LED, LOW);
   }
 
-  // snprintf(data, sizeof(data), "Hello, World! #%lu", msg_count++);
-
-  // Serial.printf("Broadcasting message: %s\n", data);
-
-  if (!broadcast_peer.send_message((uint8_t *)data, sizeof(data))) {
-    Serial.println("Failed to broadcast message");
-  }
-
-  delay(10);
+  delay(10); // Small delay to avoid rapid looping
 }
