@@ -65,6 +65,8 @@ volatile bool button_G_press = false;
 volatile bool button_R_press = false;
 
 char data[32];
+const char* receivedData = reinterpret_cast<const char*>(data);
+
 
 //ESPNOW
 // void InitESPNow() {
@@ -107,25 +109,41 @@ void configDeviceAP() {
 }
 
 
+
 // void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
-//   char macStr[18] = "0c:8b:95:96:5c:44";
-//   snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-//            mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-//   Serial.print("Data: "); 
-//   Serial.println(reinterpret_cast<const char*>(data));
-//   Serial.println("");
+//     char macStr[18];
+//     snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
+//              mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+//     Serial.print("Received from MAC: "); 
+//     Serial.println(macStr);
+//     Serial.print("Data: ");
+//     Serial.write(data, data_len); // Make sure the data is displayed correctly
+//     Serial.println();
+//     Serial.println(receivedData);
 // }
-void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
-    char macStr[18];
-    snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-             mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-    Serial.print("Received from MAC: "); 
-    Serial.println(macStr);
-    Serial.print("Data: ");
-    Serial.write(data, data_len); // Make sure the data is displayed correctly
-    Serial.println();
-    Serial.pritnln(receivedData);
+
+void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int data_len) {
+    // Ensure incoming data is null-terminated and does not exceed buffer size
+    int safe_len = min(static_cast<int>(sizeof(data) - 1), data_len);
+    memcpy(data, incomingData, safe_len);
+    data[safe_len] = '\0'; // Ensure null termination
+
+    // Since receivedData is already pointing to data, no need to redefine if it hasn't changed address
+    // Optionally, you can explicitly set it here for clarity:
+    receivedData = reinterpret_cast<const char*>(data);
+    // Serial.println(receivedData);
+
+    // Now use receivedData as a C-string
+    if (strcmp(receivedData, "red") == 0) {
+        Serial.println("Red received");
+    } else if (strcmp(receivedData, "green") == 0) {
+        Serial.println("Green received");
+    } else if (strcmp(receivedData, "white") == 0) {
+        Serial.println("White received");
+    }
 }
+
+
 
 // Setup interrupt functions ----------------------------
 void IRAM_ATTR onTime0()
@@ -189,7 +207,7 @@ int motor_acc;                                  // acceleration of the motor (un
 bool motor_status = false;                      // motor_status for status change from closing to grasping
 float angle;                                    // wrist angle from spectral flexible sensor
 
-const char* receivedData = reinterpret_cast<const char*>(data);
+// const char* receivedData = reinterpret_cast<const char*>(data);
 
 
 TinyPICO tp = TinyPICO();
@@ -211,7 +229,7 @@ void setup()
   // Once ESPNow is successfully Init, we will register for recv CB to
   // get recv packer info.
   esp_now_register_recv_cb(OnDataRecv);
-  Serial.println(receivedData);
+  // Serial.println(receivedData);
   
   pinMode(CALIBRATION_BUTTON, INPUT);
   pinMode(JOYSTICK_BUTTON, INPUT);
@@ -291,7 +309,7 @@ void loop() {
   // Check if the mode switch button is pressed
   // Assuming data is properly null-terminated and safe to use as a string
 // const char* receivedData = reinterpret_cast<const char*>(data);
-if (digitalRead(SWITCH_BUTTON) == HIGH || receivedData == "green") {
+if (digitalRead(SWITCH_BUTTON) == HIGH || strcmp(receivedData, "green") == 0) {
     // Serial.println("ESPNOW read green");
     using_wrist_mode2 = !using_wrist_mode2;
     Serial.println("Mode switch"); // Toggle between wrist_mode and wrist_mode2
@@ -337,12 +355,12 @@ if (digitalRead(SWITCH_BUTTON) == HIGH || receivedData == "green") {
           state = JOYSTICK_MODE;
           delay(50);
         }
-         if ( receivedData == "red"){
-          Serial.print("ESPNOW read red\n");
-          // calibrate_state = LOW;
-          state = ESPNOW_MODE;
-          delay(50);
-        }
+        //  if ( receivedData == "red"){
+        //   Serial.print("ESPNOW read red\n");
+        //   // calibrate_state = LOW;
+        //   state = ESPNOW_MODE;
+        //   delay(50);
+        // }
         if (digitalRead(JOYSTICK_BUTTON) == HIGH) {
           // if (reinterpret_cast<const char*>(data) == "white"){
           //     Serial.print("ESPNOW read white\n");
@@ -352,11 +370,27 @@ if (digitalRead(SWITCH_BUTTON) == HIGH || receivedData == "green") {
           state = JOYSTICK_MODE;
           delay(50);
         } 
-        if ( receivedData == "white"){
-          Serial.print("ESPNOW read white\n");
-          state = ESPNOW_MODE;
-          delay(50);
+        // if ( receivedData == "white"){
+        //   Serial.print("ESPNOW read white\n");
+        //   state = ESPNOW_MODE;
+        //   delay(50);
+        // }
+        if (receivedData) {  // Check if receivedData is not NULL
+        if (strcmp(receivedData, "red") == 0) {
+            // Handle red
+            Serial.print("ESPNOW read red\n");
+            state = ESPNOW_MODE;
+            delay(50);
+        } else if (strcmp(receivedData, "green") == 0) {
+            // Handle green
+            Serial.print("ESPNOW read green\n");
+        } else if (strcmp(receivedData, "white") == 0) {
+            // Handle white
+            Serial.print("ESPNOW read white\n");
+            state = ESPNOW_MODE;
+            delay(50);
         }
+    }
         break;
       }
 
@@ -569,13 +603,13 @@ void joystick_MODE()
   }
 }
 void espnow_MODE(){
-  if ( receivedData == "white")
+  if (strcmp(receivedData, "white") == 0)
   {
     motor_FORWARD();
     delay(80);
     // tp.DotStar_SetPixelColor( 255, 0, 0 );
   }
-  else if ( receivedData == "red")
+  else if (strcmp(receivedData, "red") == 0)
   {
     motor_BACKWARD();
     delay(80);
