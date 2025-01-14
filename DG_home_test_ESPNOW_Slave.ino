@@ -379,7 +379,8 @@ if (digitalRead(SWITCH_BUTTON) == HIGH || strcmp(receivedData, "green") == 0) {
         if (strcmp(receivedData, "red") == 0) {
             // Handle red
             Serial.print("ESPNOW read red\n");
-            state = ESPNOW_MODE;
+            // state = ESPNOW_MODE;
+            state = JOYSTICK_MODE;
             delay(50);
         } else if (strcmp(receivedData, "green") == 0) {
             // Handle green
@@ -387,7 +388,8 @@ if (digitalRead(SWITCH_BUTTON) == HIGH || strcmp(receivedData, "green") == 0) {
         } else if (strcmp(receivedData, "white") == 0) {
             // Handle white
             Serial.print("ESPNOW read white\n");
-            state = ESPNOW_MODE;
+            // state = ESPNOW_MODE;
+            state = JOYSTICK_MODE;
             delay(50);
         }
     }
@@ -585,15 +587,17 @@ void waitForButtonPress()
 void joystick_MODE()
 {
   // delay(200);  //original 100
-  if (digitalRead(CALIBRATION_BUTTON) == true)
+  if (digitalRead(CALIBRATION_BUTTON) == true || strcmp(receivedData, "white") == 0)
   {
     motor_FORWARD();
+    Serial.println("espnow: moving forward");
     delay(80);
     // tp.DotStar_SetPixelColor( 255, 0, 0 );
   }
-  else if (digitalRead(JOYSTICK_BUTTON) == true)
+  else if (digitalRead(JOYSTICK_BUTTON) == true || strcmp(receivedData, "red") == 0)
   {
     motor_BACKWARD();
+    Serial.println("espnow: moving backward");
     delay(80);
     // tp.DotStar_SetPixelColor( 0, 255, 0 );
   }
@@ -602,17 +606,25 @@ void joystick_MODE()
     motor_STOP();
   }
 }
+
+
 void espnow_MODE(){
   if (strcmp(receivedData, "white") == 0)
   {
     motor_FORWARD();
+    Serial.println("espnow: moving forward");
+    state2 = CLOSING;
     delay(80);
+    // motor_STOP();
     // tp.DotStar_SetPixelColor( 255, 0, 0 );
   }
   else if (strcmp(receivedData, "red") == 0)
   {
     motor_BACKWARD();
+    Serial.println("espnow: moving backward");
+    state2 = OPENING;
     delay(80);
+    // motor_STOP();
     // tp.DotStar_SetPixelColor( 0, 255, 0 );
   }
   else
