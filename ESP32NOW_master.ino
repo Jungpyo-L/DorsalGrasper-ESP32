@@ -89,6 +89,7 @@ void loop() {
   // Check button states and send messages accordingly
   if (digitalRead(BUTTONa) == HIGH) {
     snprintf(data, sizeof(data), "green");
+    Serial.println("broadcast green message");
     digitalWrite(LED, HIGH);  // Turn the LED on
     if (!broadcast_peer.send_message((uint8_t *)data, sizeof(data))) {
       Serial.println("Failed to broadcast green message");
@@ -99,6 +100,7 @@ void loop() {
 
   if (digitalRead(BUTTONb) == HIGH) {
     snprintf(data, sizeof(data), "white");
+    Serial.println("broadcast white message");
     digitalWrite(LED, HIGH);  // Turn the LED on
     if (!broadcast_peer.send_message((uint8_t *)data, sizeof(data))) {
       Serial.println("Failed to broadcast white message");
@@ -109,6 +111,7 @@ void loop() {
 
   if (digitalRead(BUTTONc) == HIGH) {
     snprintf(data, sizeof(data), "red");
+    Serial.println("broadcast red message");
     digitalWrite(LED, HIGH);  // Turn the LED on
     if (!broadcast_peer.send_message((uint8_t *)data, sizeof(data))) {
       Serial.println("Failed to broadcast red message");
@@ -116,7 +119,10 @@ void loop() {
     delay(1000); // Debounce delay
     digitalWrite(LED, LOW);
   }
+  else {
+    snprintf(data, sizeof(data), "empty");
+    Serial.println("broadcast nothing");
+  }
 
   delay(10); // Small delay to avoid rapid looping
 }
-
