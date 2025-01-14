@@ -67,6 +67,12 @@ volatile bool button_R_press = false;
 char data[32];
 const char* receivedData = reinterpret_cast<const char*>(data);
 
+// char data[32];               // Buffer to store incoming data
+// int lastSequence = -1;       // Variable to track the last processed sequence number
+// bool newMessageReceived = false; // Flag to indicate a new message was received
+
+
+
 
 //ESPNOW
 // void InitESPNow() {
@@ -122,7 +128,7 @@ void configDeviceAP() {
 //     Serial.println(receivedData);
 // }
 
-void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int data_len) {
+void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int data_len) {          //original espnow message receiver
     // Ensure incoming data is null-terminated and does not exceed buffer size
     int safe_len = min(static_cast<int>(sizeof(data) - 1), data_len);
     memcpy(data, incomingData, safe_len);
@@ -131,7 +137,7 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int data_l
     // Since receivedData is already pointing to data, no need to redefine if it hasn't changed address
     // Optionally, you can explicitly set it here for clarity:
     receivedData = reinterpret_cast<const char*>(data);
-    // Serial.println(receivedData);
+    Serial.println(receivedData);
 
     // Now use receivedData as a C-string
     if (strcmp(receivedData, "red") == 0) {
@@ -142,6 +148,30 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int data_l
         Serial.println("White received");
     }
 }
+
+// void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int data_len) {
+//     int safe_len = min(static_cast<int>(sizeof(data) - 1), data_len);
+//     memcpy(data, incomingData, safe_len);
+//     data[safe_len] = '\0';
+
+//     int receivedSequence;
+//     sscanf(data, "%d", &receivedSequence);
+
+//     Serial.print("Received data: ");
+//     Serial.println(data);
+//     Serial.print("Sequence received: ");
+//     Serial.println(receivedSequence);
+
+//     if (receivedSequence > lastSequence) {
+//         lastSequence = receivedSequence;
+//         newMessageReceived = true;
+//         Serial.println("New message received. Flag set.");
+//     } else {
+//         Serial.println("Duplicate message ignored.");
+//     }
+// }
+
+
 
 
 
@@ -309,7 +339,7 @@ void loop() {
   // Check if the mode switch button is pressed
   // Assuming data is properly null-terminated and safe to use as a string
 // const char* receivedData = reinterpret_cast<const char*>(data);
-if (digitalRead(SWITCH_BUTTON) == HIGH || strcmp(receivedData, "green") == 0) {
+if (digitalRead(SWITCH_BUTTON) == HIGH || strcmp(data, "green") == 0) {
     // Serial.println("ESPNOW read green");
     using_wrist_mode2 = !using_wrist_mode2;
     Serial.println("Mode switch"); // Toggle between wrist_mode and wrist_mode2
@@ -361,7 +391,7 @@ if (digitalRead(SWITCH_BUTTON) == HIGH || strcmp(receivedData, "green") == 0) {
         //   state = ESPNOW_MODE;
         //   delay(50);
         // }
-        if (digitalRead(JOYSTICK_BUTTON) == HIGH) {
+        if (digitalRead(JOYSTICK_BUTTON) == HIGH || strcmp(data, "red") == 0 || strcmp(data, "white") == 0) {
           // if (reinterpret_cast<const char*>(data) == "white"){
           //     Serial.print("ESPNOW read white\n");
           //   }
@@ -375,24 +405,24 @@ if (digitalRead(SWITCH_BUTTON) == HIGH || strcmp(receivedData, "green") == 0) {
         //   state = ESPNOW_MODE;
         //   delay(50);
         // }
-        if (receivedData) {  // Check if receivedData is not NULL
-        if (strcmp(receivedData, "red") == 0) {
-            // Handle red
-            Serial.print("ESPNOW read red\n");
-            // state = ESPNOW_MODE;
-            state = JOYSTICK_MODE;
-            delay(50);
-        } else if (strcmp(receivedData, "green") == 0) {
-            // Handle green
-            Serial.print("ESPNOW read green\n");
-        } else if (strcmp(receivedData, "white") == 0) {
-            // Handle white
-            Serial.print("ESPNOW read white\n");
-            // state = ESPNOW_MODE;
-            state = JOYSTICK_MODE;
-            delay(50);
-        }
-    }
+    //     if (receivedData) {                         // espnow
+    //     if (strcmp(receivedData, "red") == 0) {
+    //         // Handle red
+    //         Serial.print("ESPNOW read red\n");
+    //         // state = ESPNOW_MODE;
+    //         state = JOYSTICK_MODE;
+    //         delay(50);
+    //     } else if (strcmp(receivedData, "green") == 0) {
+    //         // Handle green
+    //         Serial.print("ESPNOW read green\n");
+    //     } else if (strcmp(receivedData, "white") == 0) {
+    //         // Handle white
+    //         Serial.print("ESPNOW read white\n");
+    //         // state = ESPNOW_MODE;
+    //         state = JOYSTICK_MODE;
+    //         delay(50);
+    //     }
+    // }
         break;
       }
 
@@ -435,19 +465,19 @@ if (digitalRead(SWITCH_BUTTON) == HIGH || strcmp(receivedData, "green") == 0) {
     //Serial.println('j');
     break;
   }
-  case ESPNOW_MODE:
-  {
-     if (timer1_check)
-    {
-      // Serial.println("timer 1");
-      portENTER_CRITICAL(&timerMux1);
-      timer1_check = false;
-      portEXIT_CRITICAL(&timerMux1);
-      espnow_MODE();
-    }
-    espnow_MODE();
-    break;
-  }
+  // case ESPNOW_MODE:     //espnow
+  // {
+  //    if (timer1_check)
+  //   {
+  //     // Serial.println("timer 1");
+  //     portENTER_CRITICAL(&timerMux1);
+  //     timer1_check = false;
+  //     portEXIT_CRITICAL(&timerMux1);
+  //     espnow_MODE();
+  //   }
+  //   espnow_MODE();
+  //   break;
+  // }
 
   }
 }
@@ -584,17 +614,17 @@ void waitForButtonPress()
 }
 
 
-void joystick_MODE()
+void joystick_MODE()           //original
 {
   // delay(200);  //original 100
-  if (digitalRead(CALIBRATION_BUTTON) == true || strcmp(receivedData, "white") == 0)
+  if (digitalRead(CALIBRATION_BUTTON) == true || strcmp(data, "white") == 0)
   {
     motor_FORWARD();
     Serial.println("espnow: moving forward");
     delay(80);
     // tp.DotStar_SetPixelColor( 255, 0, 0 );
   }
-  else if (digitalRead(JOYSTICK_BUTTON) == true || strcmp(receivedData, "red") == 0)
+  else if (digitalRead(JOYSTICK_BUTTON) == true || strcmp(data, "red") == 0)
   {
     motor_BACKWARD();
     Serial.println("espnow: moving backward");
@@ -607,31 +637,52 @@ void joystick_MODE()
   }
 }
 
+// void joystick_MODE() {
+//     if (newMessageReceived) {
+//         Serial.println("Processing new message...");
+//         newMessageReceived = false; // Reset flag
+        
+//         if (strstr(data, "white") != NULL) {
+//             motor_FORWARD();
+//             Serial.println("espnow: moving forward");
+//         } else if (strstr(data, "red") != NULL) {
+//             motor_BACKWARD();
+//             Serial.println("espnow: moving backward");
+//         } else {
+//             motor_STOP();
+//             Serial.println("espnow: stopping motor");
+//         }
+//     } else {
+//         Serial.println("No new message to process.");
+//     }
+// }
 
-void espnow_MODE(){
-  if (strcmp(receivedData, "white") == 0)
-  {
-    motor_FORWARD();
-    Serial.println("espnow: moving forward");
-    state2 = CLOSING;
-    delay(80);
-    // motor_STOP();
-    // tp.DotStar_SetPixelColor( 255, 0, 0 );
-  }
-  else if (strcmp(receivedData, "red") == 0)
-  {
-    motor_BACKWARD();
-    Serial.println("espnow: moving backward");
-    state2 = OPENING;
-    delay(80);
-    // motor_STOP();
-    // tp.DotStar_SetPixelColor( 0, 255, 0 );
-  }
-  else
-  {
-    motor_STOP();
-  }
-}
+
+
+// void espnow_MODE(){               //espnow
+//   if (strcmp(receivedData, "white") == 0)
+//   {
+//     motor_FORWARD();
+//     Serial.println("espnow: moving forward");
+//     state2 = CLOSING;
+//     delay(80);
+//     // motor_STOP();
+//     // tp.DotStar_SetPixelColor( 255, 0, 0 );
+//   }
+//   else if (strcmp(receivedData, "red") == 0)
+//   {
+//     motor_BACKWARD();
+//     Serial.println("espnow: moving backward");
+//     state2 = OPENING;
+//     delay(80);
+//     // motor_STOP();
+//     // tp.DotStar_SetPixelColor( 0, 255, 0 );
+//   }
+//   else
+//   {
+//     motor_STOP();
+//   }
+// }
 
 // Wrist angle control 3 for MEng team which doesn't include distance sensor(Nov.13.2023)
 void wrist_MODE()
