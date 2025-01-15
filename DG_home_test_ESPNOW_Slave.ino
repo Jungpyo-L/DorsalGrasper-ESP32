@@ -116,30 +116,17 @@ void configDeviceAP() {
 
 
 
-// void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
-//     char macStr[18];
-//     snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-//              mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-//     Serial.print("Received from MAC: "); 
-//     Serial.println(macStr);
-//     Serial.print("Data: ");
-//     Serial.write(data, data_len); // Make sure the data is displayed correctly
-//     Serial.println();
-//     Serial.println(receivedData);
-// }
-
-void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int data_len) {          //original espnow message receiver
-    // Ensure incoming data is null-terminated and does not exceed buffer size
-    int safe_len = min(static_cast<int>(sizeof(data) - 1), data_len);
-    memcpy(data, incomingData, safe_len);
-    data[safe_len] = '\0'; // Ensure null termination
-
-    // Since receivedData is already pointing to data, no need to redefine if it hasn't changed address
-    // Optionally, you can explicitly set it here for clarity:
-    receivedData = reinterpret_cast<const char*>(data);
+void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+    char macStr[18];
+    snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
+             mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+    Serial.print("Received from MAC: "); 
+    Serial.println(macStr);
+    Serial.print("Data: ");
+    Serial.write(data, data_len); // Make sure the data is displayed correctly
+    Serial.println();
     Serial.println(receivedData);
 
-    // Now use receivedData as a C-string
     if (strcmp(receivedData, "red") == 0) {
         Serial.println("Red received");
     } else if (strcmp(receivedData, "green") == 0) {
@@ -148,6 +135,27 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int data_l
         Serial.println("White received");
     }
 }
+
+// void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int data_len) {          //original espnow message receiver
+//     // Ensure incoming data is null-terminated and does not exceed buffer size
+//     int safe_len = min(static_cast<int>(sizeof(data) - 1), data_len);
+//     memcpy(data, incomingData, safe_len);
+//     data[safe_len] = '\0'; // Ensure null termination
+
+//     // Since receivedData is already pointing to data, no need to redefine if it hasn't changed address
+//     // Optionally, you can explicitly set it here for clarity:
+//     receivedData = reinterpret_cast<const char*>(data);
+//     Serial.println(receivedData);
+
+//     // Now use receivedData as a C-string
+//     if (strcmp(receivedData, "red") == 0) {
+//         Serial.println("Red received");
+//     } else if (strcmp(receivedData, "green") == 0) {
+//         Serial.println("Green received");
+//     } else if (strcmp(receivedData, "white") == 0) {
+//         Serial.println("White received");
+//     }
+// }
 
 // void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int data_len) {
 //     int safe_len = min(static_cast<int>(sizeof(data) - 1), data_len);
