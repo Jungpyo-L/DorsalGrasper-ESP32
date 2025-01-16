@@ -237,7 +237,7 @@ void loop() {
         break;
       }
     case 'w':
-      {t
+      {
         wrist_MODE_disc();
         break;
       }
