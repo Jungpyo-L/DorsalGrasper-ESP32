@@ -1,6 +1,6 @@
 /*
  * author Jungpyo Lee: <jungpyolee@berkeley.edu> (c.)
- * creation date : Jan. 14. 2025
+ * creation date : Jan. 15. 2025
  * last update : Jan. 15. 2025
  * version 1.0
  * project : Home based evaluation of the Dorsal Grasper (remote controller with ESPnow)
@@ -31,15 +31,14 @@ int bValue = 0; // To store value of the button
 
 // update these with values suitable for your network.
 // test TinyPICO {0x64, 0xB7, 0x08, 0x91, 0x9E, 0x84}
-uint8_t broadcastAddress[] = {0x64, 0xB7, 0x08, 0x91, 0x9E, 0x84};
+// Main device {0xD4, 0xD4, 0xDA, 0xAA, 0x36, 0x38}
+uint8_t broadcastAddress[] = {0xD4, 0xD4, 0xDA, 0xAA, 0x36, 0x38};
 
 
 // Setup interrupt variables --------------------------------
 volatile bool timer0_check = false; // check timer interrupt 0
 hw_timer_t *timer0 = NULL;
 portMUX_TYPE timerMux0 = portMUX_INITIALIZER_UNLOCKED;
-volatile bool button_G_press = false;
-volatile bool button_R_press = false;
 
 
 // Setup interrupt functions ----------------------------
