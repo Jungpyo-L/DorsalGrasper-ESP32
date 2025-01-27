@@ -189,13 +189,6 @@ void setup()
   pinMode(JOYSTICK_BUTTON, INPUT);
   pinMode(SWITCH_BUTTON, INPUT);    //new switch
   
-
-  // wait for serial port to open on native usb devices
-  while (!Serial)
-  {
-    delay(1);
-  }
-
   // initialize sensor
   encoder_init();
 

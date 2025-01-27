@@ -1,7 +1,7 @@
 /*
  * author Jungpyo Lee: <jungpyolee@berkeley.edu> (c.)
  * creation date : Jan. 15. 2025
- * last update : Jan. 15. 2025
+ * last update : Jan. 16. 2025
  * version 1.0
  * project : Home based evaluation of the Dorsal Grasper (remote controller with ESPnow)
  * source: https://randomnerdtutorials.com/esp-now-esp32-arduino-ide/
@@ -34,7 +34,10 @@ int bValue = 0; // To store value of the button
 // Main device {0xD4, 0xD4, 0xDA, 0xAA, 0x36, 0x8C}
 // Backup TinyPICO 1 {0xD4, 0xD4, 0xDA, 0xAA, 0x37, 0x08}
 // Backup TinyPICO 2 {0xD4, 0xD4, 0xDA, 0xAA, 0x29, 0xDC}
-uint8_t broadcastAddress[] = {0xD4, 0xD4, 0xDA, 0xAA, 0x36, 0x8C};
+// Backup TinyPICO 3 {0xD4, 0xD4, 0xDA, 0xAA, 0x2E, 0x90} d4:d4:da:aa:2e:90
+// Backup TinyPICO 4 {0x64, 0xB7, 0x08, 0x90, 0x5C, 0xF4} 64:b7:08:90:5c:f4
+// Backup TinyPICO 5 {0xD4, 0xD4, 0xDA, 0xAA, 0x2C, 0xA4} d4:d4:da:aa:2c:a4
+uint8_t broadcastAddress[] = {0xD4, 0xD4, 0xDA, 0xAA, 0x37, 0x08};
 
 
 // Setup interrupt variables --------------------------------
@@ -72,13 +75,17 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   Serial.print("\r\nLast Packet Send Status:\t");
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
+
+// Setup variables for LED blink
+// Under your other globals:
+uint32_t lastBlinkTime = 0;   // Track last time we toggled the LED
+uint32_t blinkInterval = 0;   // How many ms between toggles
+bool ledState = false;        // Current on/off state of LED
  
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial) {
-    delay(10);
-  }
+
   pinMode(BUTTONa, INPUT);
   pinMode(BUTTONb, INPUT);
   pinMode(BUTTONc, INPUT);
@@ -118,27 +125,53 @@ void setup() {
 
 
 void loop() {
-  static char mode = 'i';
+ static char mode = 'i';  // stored locally or also as global
 
-  if (timer0_check)
-  {
+  if (timer0_check) {
     portENTER_CRITICAL(&timerMux0);
     timer0_check = false;
     portEXIT_CRITICAL(&timerMux0);
+
+    // 1) Read buttons, joystick, etc.
     get_DATA();
+
+    // 2) Decide the mode
     if (myData.a) {
       mode = 'i';
     }
     else if (myData.b) {
-      mode = 'j';
-    }
-    else if (myData.c) {
       mode = 'w';
     }
-    else {
-      digitalWrite(LED, LOW);
+    else if (myData.c) {
+      mode = 'j';
     }
+    // If none pressed, you can either keep the last mode or set something else
+    // else {
+    //   mode = 'x'; // e.g., no blink
+    // }
+
     myData.mode = mode;
+
+    // 3) Update the blink interval based on mode
+    switch (mode) {
+      case 'i':
+        blinkInterval = 1000;  // blink every 500ms
+        break;
+      case 'j':
+        blinkInterval = 500;  // blink every 300ms
+        break;
+      case 'w':
+        blinkInterval = 100;  // blink every 100ms
+        break;
+      default:
+        blinkInterval = 0;    // 0 = no blinking
+        break;
+    }
+
+    // 4) Blink logic
+    updateBlink();
+    
+
     send_DATA();
     reset_DATA();
   }
@@ -177,4 +210,22 @@ void reset_DATA() {
   myData.a = false;
   myData.b = false;
   myData.c = false;
+}
+
+void updateBlink() {
+  // If blinkInterval == 0, we decide to keep LED off
+  if (blinkInterval == 0) {
+    digitalWrite(LED, LOW);
+    ledState = false;
+    return;
+  }
+
+  // Otherwise, see if it's time to toggle
+  uint32_t currentTime = millis();
+  if (currentTime - lastBlinkTime >= blinkInterval) {
+    lastBlinkTime = currentTime;
+    // Toggle the LED state
+    ledState = !ledState;
+    digitalWrite(LED, ledState ? HIGH : LOW);
+  }
 }
