@@ -1,7 +1,7 @@
 /*
  * author Jungpyo Lee: <jungpyolee@berkeley.edu> (c.)
  * creation date : Jan. 15. 2025
- * last update : Jan. 16. 2025
+ * last update : Jan. 31. 2025
  * version 1.0
  * project : Home based evaluation of the Dorsal Grasper (remote controller with ESPnow)
  * source: https://randomnerdtutorials.com/esp-now-esp32-arduino-ide/
@@ -37,8 +37,8 @@ int bValue = 0; // To store value of the button
 // Backup TinyPICO 3 {0xD4, 0xD4, 0xDA, 0xAA, 0x2E, 0x90} d4:d4:da:aa:2e:90
 // Backup TinyPICO 4 {0x64, 0xB7, 0x08, 0x90, 0x5C, 0xF4} 64:b7:08:90:5c:f4
 // Backup TinyPICO 5 {0xD4, 0xD4, 0xDA, 0xAA, 0x2C, 0xA4} d4:d4:da:aa:2c:a4
-uint8_t broadcastAddress[] = {0xD4, 0xD4, 0xDA, 0xAA, 0x37, 0x08};
-
+uint8_t broadcastAddress[] = {0xD4, 0xD4, 0xDA, 0xAA, 0x2E, 0x90}; // Device #1
+// uint8_t broadcastAddress[] = {0xD4, 0xD4, 0xDA, 0xAA, 0x29, 0xDC}; // Device #2
 
 // Setup interrupt variables --------------------------------
 volatile bool timer0_check = false; // check timer interrupt 0
